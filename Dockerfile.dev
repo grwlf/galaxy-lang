@@ -5,3 +5,12 @@ COPY docker/with_the_same_user.sh /install/with_the_same_user.sh
 
 RUN apt-get update --fix-missing && \
     apt-get install -y sudo
+
+
+RUN pip3 install --upgrade pip && \
+    pip3 install beautifultable tqdm \
+                 hypothesis pytest \
+                 ipdb \
+                 pyls pyls-mypy mypy \
+                 pytest-mypy
+
