@@ -14,3 +14,4 @@ RUN pip3 install --upgrade pip && \
                  pyls pyls-mypy mypy \
                  pytest-mypy
 
+RUN echo 'export PATH=/solution/.nix_docker_inject.env/bin:$PATH' >>/etc/profile
