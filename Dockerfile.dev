@@ -1,0 +1,7 @@
+FROM icfpcontest2020/python
+
+COPY docker/with_the_same_user.sh /install/with_the_same_user.sh
+
+
+RUN apt-get update --fix-missing && \
+    apt-get install -y sudo
