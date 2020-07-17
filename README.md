@@ -5,3 +5,4 @@
 * Twitter: https://twitter.com/icfpcontest2020
 * About Dockerfiles https://github.com/icfpcontest2020/dockerfiles
 * Swagger API https://icfpc2020-api.testkontur.ru/swagger/index.html
+* OpenAPI gen: https://github.com/OpenAPITools/openapi-generator
