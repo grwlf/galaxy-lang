@@ -8,10 +8,12 @@ RUN apt-get update --fix-missing && \
 
 
 RUN pip3 install --upgrade pip && \
-    pip3 install beautifultable tqdm \
-                 hypothesis pytest \
-                 ipdb \
-                 pyls pyls-mypy mypy \
-                 pytest-mypy
+    pip3 install hypothesis pytest ipdb pyls pyls-mypy mypy pytest-mypy
 
 RUN echo 'export PATH=/solution/.nix_docker_inject.env/bin:$PATH' >>/etc/profile
+RUN echo 'export PYTHONPATH=/solution/src:$PYTHONPATH' >>/etc/profile
+RUN echo 'export SOLUTION_SOURCE=/solution' >>/etc/profile
+RUN echo 'alias ipython=/solution/ipython.sh' >>/etc/profile
+
+RUN pip3 install --upgrade pip && \
+    pip3 install dateutils
