@@ -153,11 +153,16 @@ class VType(Enum):
   List=2
   TLam=3
   Bool=4
+  TErr=5
+
+@dataclass
+class Err:
+  msg:str
 
 @dataclass(frozen=True)
 class Val:
   typ:VType
-  val:Union[int,Picture,list,Lam,bool]
+  val:Union[int,Picture,list,Lam,bool,Err]
 
 Stack=List[Val]
 
@@ -170,8 +175,8 @@ def mkstate0()->State:
 
 def asint(v:Val)->int:
   assert isinstance(v,Val)
-  assert v.typ==VType.Int
-  # FIXME assert isinstance(v.val,int), f"{v.val}"
+  assert v.typ==VType.Int, f"{v.typ}"
+  assert isinstance(v.val,int), f"{v.val}"
   return int(v.val)
 
 def aslam(v:Val)->Callable[[Val],Val]:
@@ -180,6 +185,11 @@ def aslam(v:Val)->Callable[[Val],Val]:
   assert isinstance(v.val,Lam)
   return v.val.fn
 
+def checkerr(vals, lam)->Val:
+  for v in vals:
+    if v.typ==VType.TErr:
+      return v
+  return lam(*vals)
 
 def div_c0(a, b):
   if (a >= 0) != (b >= 0) and a % b:
@@ -204,10 +214,8 @@ def interp_expr(expr:List[Token], s:State)->Stack:
       assert isinstance(t.val, Op)
       if t.val==T:
         stack.append(_T)
-        # stack.append(Val(VType.Bool,True))
       elif t.val==F:
         stack.append(_F)
-        # stack.append(Val(VType.Bool,False))
       elif t.val==eq:
         def _eq(a,b):
           assert a.typ==b.typ
@@ -221,27 +229,38 @@ def interp_expr(expr:List[Token], s:State)->Stack:
       elif t.val==mul:
         stack.append(Val(VType.TLam,
                          Lam(lambda a: Val(VType.TLam,
-                         Lam(lambda b: Val(VType.Int, asint(a)*asint(b)))))))
+                         Lam(lambda b: Val(VType.Int,
+                           checkerr([a,b], lambda a,b: asint(a)*asint(b))))))))
       elif t.val==add:
         stack.append(Val(VType.TLam,
                          Lam(lambda a: Val(VType.TLam,
                          Lam(lambda b: Val(VType.Int, asint(a)+asint(b)))))))
       elif t.val==div:
+        def _div(a,b):
+          if b.typ==VType.Int and int(b.val)==0:
+            return Val(VType.TErr, f"Division by zero")
+          return checkerr([a,b], lambda a,b: div_c0(asint(a),asint(b)))
         stack.append(Val(VType.TLam,
                          Lam(lambda a: Val(VType.TLam,
-                         Lam(lambda b: Val(VType.Int, div_c0(asint(a),asint(b))))))))
+                         Lam(lambda b: Val(VType.Int,_div(a,b)))))))
       elif t.val==neg:
         stack.append(Val(VType.TLam,
                          Lam(lambda a: Val(VType.Int, -asint(a)))))
       elif t.val==inc:
         stack.append(Val(VType.TLam,
-                         Lam(lambda a: Val(VType.Int, asint(a)+1))))
+                         Lam(lambda a: Val(VType.Int,
+                           checkerr([a], lambda a: asint(a)+1)))))
       elif t.val==dec:
         stack.append(Val(VType.TLam,
-                         Lam(lambda a: Val(VType.Int, asint(a)-1))))
+                         Lam(lambda a: Val(VType.Int,
+                           checkerr([a], lambda a: asint(a)-1)))))
       elif t.val==pwr2:
-        stack.append(Val(VType.TLam,
-                         Lam(lambda a: Val(VType.Int, 2**asint(a)))))
+        def _pwr2(v):
+          if v.typ==VType.Int and int(v.val)<0:
+            return Val(VType.TErr, f"pwr2: {v.val}<0")
+          else:
+            return Val(VType.Int, checkerr([v], lambda v: 2**asint(v)))
+        stack.append(Val(VType.TLam, Lam(_pwr2)))
       elif t.val==C:
         stack.append(Val(VType.TLam,
                          Lam(lambda a: Val(VType.TLam,
