@@ -4,6 +4,13 @@ from collections import OrderedDict
 from ipdb import set_trace
 
 
+#  ____
+# |  _ \ __ _ _ __ ___  ___
+# | |_) / _` | '__/ __|/ _ \
+# |  __/ (_| | |  \__ \  __/
+# |_|   \__,_|_|  |___/\___|
+
+
 OPS:Dict[str,'Op']={}
 collect_ops:bool=True
 
@@ -57,6 +64,7 @@ def mkop(s:str)->Op:
 
 from enum import Enum
 class TType(Enum):
+  """ Token types"""
   Int=0
   List=2
   Op=3
@@ -99,14 +107,14 @@ def assert_isline(s:Any)->None:
   if len(s)>0:
     assert isinstance(s[0],str)
 
-@dataclass
-class Assign:
-  name:Ref
-  expr:List[Token]
+# @dataclass
+# class Assign:
+#   name:Ref
+#   expr:List[Token]
 
-def parse_expr(line:List[Word])->List[Token]:
+def parse_expr(line:str)->List[Token]:
   acc=[]
-  for w in line:
+  for w in line.split():
     if isint(w):
       acc.append(Token(TType.Int, int(w)))
     elif isref(w):
@@ -117,28 +125,39 @@ def parse_expr(line:List[Word])->List[Token]:
       raise ValueError(f'Unknown expr token "{w}"')
   return acc
 
-def parse_assign(line:Line)->Assign:
-  assert_isline(line)
-  ws=line
-  ref=mkref(ws[0])
-  assert ws[1]=='='
-  expr=parse_expr(ws[2:])
-  return Assign(ref,expr)
+def parse_assign(ws:str)->Tuple[Ref,List[Token]]:
+  parts=ws.split('=')
+  assert len(parts)==2, f"{ws}"
+  patterns=parts[0].split()
+  assert len(patterns)==1
+  ref=mkref(patterns[0])
+  toks=parse_expr(parts[1])
+  return ref,toks
 
 @dataclass
 class Program:
-  body:Dict[Ref,Assign]
+  body:Dict[Ref,List[Token]]
 
 
 def parse_program(src:str)->Program:
   acc=OrderedDict()
   lines=src.split('\n')
   for l in lines:
-    ws=l.split()
-    a=parse_assign(ws)
-    acc[a.name]=a
+    if len(l.strip())==0 or l.strip()[0]=='#':
+      continue
+    ref,toks=parse_assign(l)
+    acc[ref]=toks
   return Program(acc)
 
+
+
+
+#  ___       _                           _
+# |_ _|_ __ | |_ ___ _ __ _ __  _ __ ___| |_
+#  | || '_ \| __/ _ \ '__| '_ \| '__/ _ \ __|
+#  | || | | | ||  __/ |  | |_) | | |  __/ |_
+# |___|_| |_|\__\___|_|  | .__/|_|  \___|\__|
+#                        |_|
 
 class Lam:
   def __init__(self, fn:Callable[['Val'],'Val'], bool_val:Optional[bool]=None):
@@ -159,6 +178,7 @@ class VType(Enum):
   TErr=5
   Nil=6
   Thunk=7
+  Ref=8
 
 @dataclass(frozen=True)
 class Err:
@@ -173,21 +193,43 @@ class Thunk:
   f:'Val'
   x:'Val'
 
-ValUnion=Union[int,Picture,Tuple['Val','Val'],Lam,bool,Err,Nil,Thunk]
+ValUnion=Union[int,Picture,Tuple['Val','Val'],Lam,bool,Err,Nil,Thunk,Ref]
 
 @dataclass(frozen=True)
 class Val:
   typ:VType
   val:ValUnion
 
+def asint(v:Val)->int:
+  assert isinstance(v,Val)
+  assert v.typ==VType.Int, f"{v.typ}"
+  assert isinstance(v.val,int), f"{v.val}"
+  return int(v.val)
+
+# def aslam(v:Val)->Callable[[Val],Val]:
+#   assert isinstance(v,Val)
+#   assert v.typ==VType.TLam, f"{v}"
+#   assert isinstance(v.val,Lam)
+#   return v.val.fn
+
+def call(f:Val, v:Val)->Val:
+  assert isinstance(f,Val) and isinstance(v,Val)
+  f=force(f)
+  v=force(v)
+  assert f.typ==VType.TLam, f"{f}"
+  assert isinstance(f.val,Lam)
+  return f.val.fn(v)
+
 def force(v:Val)->Val:
   assert isinstance(v,Val), f"{v}"
   if v.typ==VType.Thunk:
     assert isinstance(v.val,Thunk)
-    f=force(v.val.f)
-    x=force(v.val.x)
-    assert isinstance(f.val,Lam)
-    return f.val.fn(x)
+    return call(v.val.f,v.val.x)
+    # f=force(v.val.f)
+    # x=force(v.val.x)
+    # if not isinstance(f.val,Lam):
+    #   yield ()
+    # assert isinstance(f.val,Lam)
   else:
     return v
 
@@ -205,22 +247,10 @@ def mknil()->Val:
 
 @dataclass
 class State:
-  v:Dict[Ref,Stack]
+  mem:Dict[Ref,Val]
 
 def mkstate0()->State:
   return State({})
-
-def asint(v:Val)->int:
-  assert isinstance(v,Val)
-  assert v.typ==VType.Int, f"{v.typ}"
-  assert isinstance(v.val,int), f"{v.val}"
-  return int(v.val)
-
-def aslam(v:Val)->Callable[[Val],Val]:
-  assert isinstance(v,Val)
-  assert v.typ==VType.TLam, f"{v.typ}"
-  assert isinstance(v.val,Lam)
-  return v.val.fn
 
 def checkerr(vals, lam)->Val:
   """ DEPRECATED"""
@@ -258,13 +288,13 @@ _F = Val(VType.Bool, False)
 def interp_expr(expr:List[Token], s:State)->Stack:
   stack:Stack=[]
   for t in reversed(expr):
-    assert isinstance(t,Token)
+    assert isinstance(t,Token), f"{t}"
     if t.typ==TType.Int:
       assert isinstance(t.val, int)
       stack.append(Val(VType.Int, t.val))
     elif t.typ==TType.Ref:
       assert isinstance(t.val, Ref)
-      stack.extend(list(s.v[t.val]))
+      stack.append(Val(VType.Ref, t.val))
     elif t.typ==TType.Op:
       assert isinstance(t.val, Op)
       if t.val==T:
@@ -281,6 +311,12 @@ def interp_expr(expr:List[Token], s:State)->Stack:
         stack.append(Val(VType.TLam,
                          Lam(lambda a: Val(VType.TLam,
                          Lam(lambda b: _eq(a,b))))))
+      elif t.val==lt:
+        stack.append(Val(VType.TLam,
+                         Lam(lambda a: Val(VType.TLam,
+                         Lam(lambda b:
+                           checkerr([a,b], lambda a,b:
+                             Val(VType.Bool, asint(a)<asint(b))))))))
       elif t.val==mul:
         stack.append(Val(VType.TLam,
                          Lam(lambda a: Val(VType.TLam,
@@ -322,21 +358,21 @@ def interp_expr(expr:List[Token], s:State)->Stack:
                          Lam(lambda a: Val(VType.TLam,
                          Lam(lambda b: Val(VType.TLam,
                          Lam(lambda c:
-                           aslam(aslam(a)(c))(b)
+                           call(call(a,c),b)
                          )))))))
       elif t.val==S:
         stack.append(Val(VType.TLam,
                          Lam(lambda x0: Val(VType.TLam,
                          Lam(lambda x1: Val(VType.TLam,
                          Lam(lambda x2:
-                           aslam(aslam(x0)(x2))( aslam(x1)(x2) )
+                           call(call(x0,x2),call(x1,x2))
                          )))))))
       elif t.val==B:
         stack.append(Val(VType.TLam,
                          Lam(lambda x0: Val(VType.TLam,
                          Lam(lambda x1: Val(VType.TLam,
                          Lam(lambda x2:
-                           aslam(x0)(aslam(x1)(x2))
+                           call(x0,call(x1,x2))
                          )))))))
       elif t.val==I:
         stack.append(Val(VType.TLam,
@@ -400,20 +436,23 @@ def interp_expr(expr:List[Token], s:State)->Stack:
       raise ValueError(f"Unsupported token type '{t.typ}'")
   return stack
 
-def interp_assign(a:Assign, s:State)->State:
-  stack=interp_expr(a.expr, s)
-  s.v[a.name]=stack
-  return s
-
 
 def interp_program(p:Program, s0_:Optional[State]=None)->State:
   s:State=s0_ if s0_ is not None else mkstate0()
-  for i,(aref,a) in enumerate(p.body.items()):
-    interp_assign(a,s)
+  for i,(ref,expr) in enumerate(p.body.items()):
+    stack=interp_expr(expr, s)
+    assert len(stack)==1, f"{stack}"
+    s.mem[ref]=stack[0]
   return s
 
-def interp(p:str, s0=None)->State:
-  return interp_program(parse_program(p), s0)
+
+def run_program(name:str, src:str)->Val:
+  s=interp_program(parse_program(src))
+  return force(s.mem[mkref(name)])
+
+
+# def interp(p:str, s0=None)->State:
+#   return interp_program(parse_program(p), s0)
 
 def interp_test(hint:str, test:str)->None:
   print(f"Testing {hint}")
@@ -422,14 +461,25 @@ def interp_test(hint:str, test:str)->None:
       continue
     print(f"Checking line {i:02d}: {tl.strip()}")
     expr_test,expr_ans=tl.split('=')
-    stack_test=interp_expr(parse_expr(expr_test.split()),mkstate0())
-    stack_ans=interp_expr(parse_expr(expr_ans.split()),mkstate0())
+    stack_test=interp_expr(parse_expr(expr_test),mkstate0())
+    stack_ans=interp_expr(parse_expr(expr_ans),mkstate0())
     assert len(stack_test)==1, f"len({stack_test})=={len(stack_test)}"
     assert len(stack_ans)==1, f"{stack_ans}"
     val_test=force(stack_test[0])
     val_ans=force(stack_ans[0])
     # assert val_test is not val_ans, f"{val_test}, {val_ans}"
     assert val_test==val_ans, f"{val_test} != {val_ans}"
+
+
+
+
+
+#  __  __           _
+# |  \/  | ___   __| | ___ _ __ ___
+# | |\/| |/ _ \ / _` |/ _ \ '_ ` _ \
+# | |  | | (_) | (_| |  __/ | | | | |
+# |_|  |_|\___/ \__,_|\___|_| |_| |_|
+
 
 Bit=int
 
@@ -512,3 +562,13 @@ def dem_val(s:str)->Tuple[Val,int]:
 #       return state2, interpret(multipledraw,data)
 #     vector=api_send(mod_val(data))
 #     state=state2
+
+
+
+
+
+
+
+
+
+
