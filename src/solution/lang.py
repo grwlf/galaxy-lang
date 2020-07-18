@@ -158,21 +158,39 @@ class VType(Enum):
   Bool=4
   TErr=5
   Nil=6
+  Thunk=7
 
-@dataclass
+@dataclass(frozen=True)
 class Err:
   msg:str
 
-@dataclass
+@dataclass(frozen=True)
 class Nil:
   pass
 
-ValUnion=Union[int,Picture,Tuple['Val','Val'],Lam,bool,Err,Nil]
+@dataclass(frozen=True)
+class Thunk:
+  f:'Val'
+  x:'Val'
+
+ValUnion=Union[int,Picture,Tuple['Val','Val'],Lam,bool,Err,Nil,Thunk]
 
 @dataclass(frozen=True)
 class Val:
   typ:VType
   val:ValUnion
+
+def force(v:Val)->Val:
+  assert isinstance(v,Val), f"{v}"
+  if v.typ==VType.Thunk:
+    assert isinstance(v.val,Thunk)
+    f=force(v.val.f)
+    x=force(v.val.x)
+    assert isinstance(f.val,Lam)
+    return f.val.fn(x)
+  else:
+    return v
+
 
 Stack=List[Val]
 
@@ -373,12 +391,9 @@ def interp_expr(expr:List[Token], s:State)->Stack:
                          )))))))
 
       elif t.val==ap:
-        l=stack.pop()
-        assert l.typ==VType.TLam
+        f=stack.pop()
         x=stack.pop()
-        assert isinstance(l.val,Lam)
-        r=l.val.fn(x)
-        stack.append(r)
+        stack.append(Val(VType.Thunk, Thunk(f,x)))
       else:
         raise ValueError(f"Unsupported token op '{t.val}'")
     else:
@@ -407,19 +422,16 @@ def interp_test(hint:str, test:str)->None:
       continue
     print(f"Checking line {i:02d}: {tl.strip()}")
     expr_test,expr_ans=tl.split('=')
-    val_test=interp_expr(parse_expr(expr_test.split()),mkstate0())
-    val_ans=interp_expr(parse_expr(expr_ans.split()),mkstate0())
-    assert val_test is not val_ans
+    stack_test=interp_expr(parse_expr(expr_test.split()),mkstate0())
+    stack_ans=interp_expr(parse_expr(expr_ans.split()),mkstate0())
+    assert len(stack_test)==1, f"len({stack_test})=={len(stack_test)}"
+    assert len(stack_ans)==1, f"{stack_ans}"
+    val_test=force(stack_test[0])
+    val_ans=force(stack_ans[0])
+    # assert val_test is not val_ans, f"{val_test}, {val_ans}"
     assert val_test==val_ans, f"{val_test} != {val_ans}"
 
 Bit=int
-
-# HINT:
-# When it's expecting a number, seeing 11 as the first two bits creates a
-# deeper list. After a number has finished, and the list level is greater than
-# 0, a 11 continues a list, and a 00 ends the list, returning to a lower level
-# The behaviour still seems to be undefined for seeing 00 when it expects a
-# number
 
 @dataclass(frozen=True)
 class ModulatedVal:
@@ -451,11 +463,13 @@ def mod_val(v:Val)->ModulatedVal:
   acc=""
   if v.typ==VType.Tuple:
     acc+="11"
+    assert isinstance(v.val, tuple)
     acc+=mod_val(v.val[0]).body
     acc+=mod_val(v.val[1]).body
   elif v.typ==VType.Nil:
     acc+="00"
   elif v.typ==VType.Int:
+    assert isinstance(v.val, int)
     acc+=mod_int(v.val).body
   else:
     raise ValueError(f"Can't modulate {v}")
@@ -489,12 +503,12 @@ def dem_val(s:str)->Tuple[Val,int]:
     return mkint(i),sz
 
 
-from solution.api import send
-
-def interact(protocol:Program, state:Val, vector:Val):
-  while True:
-    flag,state2,data=interpret(protocol,state,vector)
-    if flag.val==0:
-      return state2, interpret(multipledraw,data)
-    vector=send(mod_val(data))
-    state=state2
+# from solution.api import api_send
+# def interact(protocol:Program, state:Val, vector:Val):
+#   """ A draft """
+#   while True:
+#     flag,state2,data=interpret(protocol,state,vector)
+#     if flag.val==0:
+#       return state2, interpret(multipledraw,data)
+#     vector=api_send(mod_val(data))
+#     state=state2
