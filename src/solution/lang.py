@@ -229,8 +229,9 @@ def interp_expr(expr:List[Token], s:State)->Stack:
       elif t.val==mul:
         stack.append(Val(VType.TLam,
                          Lam(lambda a: Val(VType.TLam,
-                         Lam(lambda b: Val(VType.Int,
-                           checkerr([a,b], lambda a,b: asint(a)*asint(b))))))))
+                         Lam(lambda b:
+                           checkerr([a,b], lambda a,b:
+                             Val(VType.Int,asint(a)*asint(b))))))))
       elif t.val==add:
         stack.append(Val(VType.TLam,
                          Lam(lambda a: Val(VType.TLam,
@@ -248,12 +249,12 @@ def interp_expr(expr:List[Token], s:State)->Stack:
                          Lam(lambda a: Val(VType.Int, -asint(a)))))
       elif t.val==inc:
         stack.append(Val(VType.TLam,
-                         Lam(lambda a: Val(VType.Int,
-                           checkerr([a], lambda a: asint(a)+1)))))
+                         Lam(lambda a:
+                           checkerr([a], lambda a: Val(VType.Int, asint(a)+1)))))
       elif t.val==dec:
         stack.append(Val(VType.TLam,
-                         Lam(lambda a: Val(VType.Int,
-                           checkerr([a], lambda a: asint(a)-1)))))
+                         Lam(lambda a:
+                           checkerr([a], lambda a: Val(VType.Int,asint(a)-1)))))
       elif t.val==pwr2:
         def _pwr2(v):
           if v.typ==VType.Int and int(v.val)<0:
@@ -282,6 +283,29 @@ def interp_expr(expr:List[Token], s:State)->Stack:
                          Lam(lambda x2:
                            aslam(x0)(aslam(x1)(x2))
                          )))))))
+      elif t.val==I:
+        stack.append(Val(VType.TLam,
+                         Lam(lambda x0: x0)))
+      elif t.val==cons:
+        stack.append(Val(VType.TLam,
+                         Lam(lambda x0: Val(VType.TLam,
+                         Lam(lambda x1: Val(VType.TLam,
+                         Lam(lambda x2:
+                           aslam(aslam(x2)(x0))(x1)
+                         )))))))
+      elif t.val==car:
+        stack.append(Val(VType.TLam,
+                         Lam(lambda x0:
+                           aslam(x0)(_T)
+                         )))
+      elif t.val==nil:
+        stack.append(Val(VType.TLam,
+                         Lam(lambda x0: _T
+                         )))
+      # elif t.val==isnil:
+      #   stack.append(Val(VType.TLam,
+      #                    Lam(lambda x0: _T
+      #                    )))
       elif t.val==ap:
         l=stack.pop()
         assert l.typ==VType.TLam
