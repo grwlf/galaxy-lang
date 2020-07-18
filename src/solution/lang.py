@@ -159,16 +159,6 @@ def parse_program(src:str)->Program:
 # |___|_| |_|\__\___|_|  | .__/|_|  \___|\__|
 #                        |_|
 
-class Lam:
-  def __init__(self, fn:Callable[['Val'],'Val'], bool_val:Optional[bool]=None):
-    self.fn:Callable[['Val'],'Val']=fn
-    self.bool_val:Optional[bool]=bool_val
-
-  def __eq__(self, other)->bool:
-    if self.bool_val is not None and other.bool_val is not None:
-      return self.bool_val and other.bool_val
-    raise ValueError(f"Can't compare this lambda with {other}")
-
 class VType(Enum):
   Int=0
   Pic=1
@@ -180,6 +170,13 @@ class VType(Enum):
   Thunk=7
   Ref=8
 
+ValUnion=Union[int,Picture,Tuple['Val','Val'],'Lam',bool,'Err','Nil','Thunk',Ref]
+
+@dataclass(frozen=True)
+class Val:
+  typ:VType
+  val:ValUnion
+
 @dataclass(frozen=True)
 class Err:
   msg:str
@@ -190,15 +187,13 @@ class Nil:
 
 @dataclass(frozen=True)
 class Thunk:
-  f:'Val'
-  x:'Val'
+  f:Val
+  x:Val
 
-ValUnion=Union[int,Picture,Tuple['Val','Val'],Lam,bool,Err,Nil,Thunk,Ref]
+class Lam:
+  def __init__(self, fn:Callable[[Val],Val]):
+    self.fn:Callable[[Val],Val]=fn
 
-@dataclass(frozen=True)
-class Val:
-  typ:VType
-  val:ValUnion
 
 @dataclass
 class State:
