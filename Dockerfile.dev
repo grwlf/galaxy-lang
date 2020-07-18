@@ -17,3 +17,6 @@ RUN echo 'alias ipython=/solution/ipython.sh' >>/etc/profile
 
 RUN pip3 install --upgrade pip && \
     pip3 install dateutils
+
+RUN pip3 install matplotlib PyQt5 numpy
+RUN apt-get install -y x11-apps qt5-default
