@@ -11,4 +11,7 @@ client=ApiClient(conf)
 
 # a=ScoreboardApiApi(client)
 
-a=TeamsApiApi(client)
+# a=TeamsApiApi(client)
+
+
+a=AliensApiApi(client)
