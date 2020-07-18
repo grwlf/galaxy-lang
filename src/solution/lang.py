@@ -355,6 +355,24 @@ def interp_expr(expr:List[Token], s:State)->Stack:
           return _T if len(v.val)==0 else _F
         stack.append(Val(VType.TLam, Lam(chkerr1(_isnil))))
 
+      elif t.val==if0:
+        # def _isnil(v):
+        #   if v.typ!=VType.List:
+        #     return _ERR(f"Expected list, but got {v.typ}")
+        #   assert isinstance(v.val,list)
+        #   return _T if len(v.val)==0 else _F
+        # stack.append(Val(VType.TLam, Lam(chkerr1(_isnil))))
+        def _if0(c:Val,t:Val,f:Val)->Val:
+          if c.typ!=VType.Int:
+            return _ERR(f"if0: expected int, got '{c}'")
+          assert isinstance(c.val,int)
+          return t if c.val==0 else f
+        stack.append(Val(VType.TLam,
+                         Lam(lambda x0: Val(VType.TLam,
+                         Lam(lambda x1: Val(VType.TLam,
+                         Lam(lambda x2: checkerr([x0,x1,x2], _if0)
+                         )))))))
+
       elif t.val==ap:
         l=stack.pop()
         assert l.typ==VType.TLam
