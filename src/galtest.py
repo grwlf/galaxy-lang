@@ -180,23 +180,23 @@ modem_test(mktuple(mkint(1),mktuple(mkint(2),mktuple(mkint(3),mknil()))))
 modem_test(mktuple(mkint(1),mkint(2)))
 
 
-# V=run_program(':33','''
-#   :0 = cons
-#   :33 = ap ap :0 33 22
-#   ''')
-
-
-
-
-
+V=run_program(':33', interp_program('''
+  :0 = cons
+  :1 = 22
+  :2 = 33
+  :33 = ap ap :0 :1 :2
+  '''))
+print(V)
 
 
 
 
 
 G=open(join(environ['SOLUTION_SOURCE'],'galaxy.txt'),'r').read()
-P=parse_program(G)
-S=interp_program(P)
+S=interp_program(G)
+S=interp_program('''
+  :9999 = ap ap galaxy nil ap ap cons 0 0
+''',S)
 
 
 # print(P)

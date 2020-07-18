@@ -200,17 +200,30 @@ class Val:
   typ:VType
   val:ValUnion
 
+@dataclass
+class State:
+  mem:Dict[Ref,Val]
+
+
+STATE:State=State({})
+
 def asint(v:Val)->int:
   assert isinstance(v,Val)
   assert v.typ==VType.Int, f"{v.typ}"
   assert isinstance(v.val,int), f"{v.val}"
   return int(v.val)
 
-# def aslam(v:Val)->Callable[[Val],Val]:
-#   assert isinstance(v,Val)
-#   assert v.typ==VType.TLam, f"{v}"
-#   assert isinstance(v.val,Lam)
-#   return v.val.fn
+def force(v:Val)->Val:
+  assert isinstance(v,Val), f"{v}"
+  while True:
+    if v.typ==VType.Thunk:
+      assert isinstance(v.val,Thunk)
+      v=call(v.val.f,v.val.x)
+    elif v.typ==VType.Ref:
+      assert isinstance(v.val,Ref)
+      v=STATE.mem[v.val]
+    else:
+      return v
 
 def call(f:Val, v:Val)->Val:
   assert isinstance(f,Val) and isinstance(v,Val)
@@ -219,20 +232,6 @@ def call(f:Val, v:Val)->Val:
   assert f.typ==VType.TLam, f"{f}"
   assert isinstance(f.val,Lam)
   return f.val.fn(v)
-
-def force(v:Val)->Val:
-  assert isinstance(v,Val), f"{v}"
-  if v.typ==VType.Thunk:
-    assert isinstance(v.val,Thunk)
-    return call(v.val.f,v.val.x)
-    # f=force(v.val.f)
-    # x=force(v.val.x)
-    # if not isinstance(f.val,Lam):
-    #   yield ()
-    # assert isinstance(f.val,Lam)
-  else:
-    return v
-
 
 Stack=List[Val]
 
@@ -244,10 +243,6 @@ def mktuple(a:Val,b:Val)->Val:
 
 def mknil()->Val:
   return Val(VType.Nil, Nil())
-
-@dataclass
-class State:
-  mem:Dict[Ref,Val]
 
 def mkstate0()->State:
   return State({})
@@ -437,7 +432,8 @@ def interp_expr(expr:List[Token], s:State)->Stack:
   return stack
 
 
-def interp_program(p:Program, s0_:Optional[State]=None)->State:
+def interp_program(src:str, s0_:Optional[State]=None)->State:
+  p=parse_program(src)
   s:State=s0_ if s0_ is not None else mkstate0()
   for i,(ref,expr) in enumerate(p.body.items()):
     stack=interp_expr(expr, s)
@@ -446,9 +442,10 @@ def interp_program(p:Program, s0_:Optional[State]=None)->State:
   return s
 
 
-def run_program(name:str, src:str)->Val:
-  s=interp_program(parse_program(src))
-  return force(s.mem[mkref(name)])
+def run_program(name:str, s:State)->Val:
+  global STATE
+  STATE=s
+  return force(STATE.mem[mkref(name)])
 
 
 # def interp(p:str, s0=None)->State:
