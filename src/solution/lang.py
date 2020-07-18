@@ -488,3 +488,13 @@ def dem_val(s:str)->Tuple[Val,int]:
     i,sz=dem_int(s)
     return mkint(i),sz
 
+
+from solution.api import send
+
+def interact(protocol:Program, state:Val, vector:Val):
+  while True:
+    flag,state2,data=interpret(protocol,state,vector)
+    if flag.val==0:
+      return state2, interpret(multipledraw,data)
+    vector=send(mod_val(data))
+    state=state2
