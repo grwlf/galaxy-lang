@@ -148,22 +148,26 @@ class Lam:
   def __eq__(self, other)->bool:
     if self.bool_val is not None and other.bool_val is not None:
       return self.bool_val and other.bool_val
-    raise ValueError("Can't compare this lambdas")
+    raise ValueError(f"Can't compare this lambda with {other}")
 
 class VType(Enum):
   Int=0
   Pic=1
-  List=2
+  Tuple=2
   TLam=3
   Bool=4
   TErr=5
+  Nil=6
 
 @dataclass
 class Err:
   msg:str
 
+@dataclass
+class Nil:
+  pass
 
-ValUnion=Union[int,Picture,List['Val'],Lam,bool,Err]
+ValUnion=Union[int,Picture,Tuple['Val','Val'],Lam,bool,Err,Nil]
 
 @dataclass(frozen=True)
 class Val:
@@ -171,6 +175,15 @@ class Val:
   val:ValUnion
 
 Stack=List[Val]
+
+def mkint(i:int)->Val:
+  return Val(VType.Int, i)
+
+def mktuple(a:Val,b:Val)->Val:
+  return Val(VType.Tuple, (a,b))
+
+def mknil()->Val:
+  return Val(VType.Nil, Nil())
 
 @dataclass
 class State:
@@ -215,15 +228,14 @@ def div_c0(a, b):
   else:
     return a // b
 
-_T = Val(VType.TLam, Lam(lambda a: Val(VType.TLam, Lam(lambda b: a))))
-_F = Val(VType.TLam, Lam(lambda a: Val(VType.TLam, Lam(lambda b: b))))
 
 _ERR = lambda msg : Val(VType.TErr, msg)
 
-
-
-# _T = Val(VType.Bool, True)
-# _F = Val(VType.Bool, False)
+# FIXME: typed interpretation may reject some programs, like pwr2
+_T = Val(VType.Bool, True)
+_F = Val(VType.Bool, False)
+# _T = Val(VType.TLam, Lam(lambda a: Val(VType.TLam, Lam(lambda b: a))))
+# _F = Val(VType.TLam, Lam(lambda a: Val(VType.TLam, Lam(lambda b: b))))
 
 def interp_expr(expr:List[Token], s:State)->Stack:
   stack:Stack=[]
@@ -313,46 +325,33 @@ def interp_expr(expr:List[Token], s:State)->Stack:
                          Lam(lambda x0: x0)))
       elif t.val==nil:
         _e:List[Val]=[]
-        stack.append(Val(VType.List, _e))
+        stack.append(Val(VType.Nil, Nil()))
       elif t.val==cons or t.val==vec:
         def _cons(x0,x1)->Val:
           assert isinstance(x0,Val) and isinstance(x1,Val)
-          if x1.typ==VType.List:
-            assert isinstance(x1.val,list)
-            return Val(VType.List, [x0]+x1.val)
-          else:
-            return Val(VType.List, [x0,x1])
+          return Val(VType.Tuple, (x0,x1))
         stack.append(Val(VType.TLam,
                          Lam(lambda x0: Val(VType.TLam,
                          Lam(lambda x1: checkerr([x0,x1], _cons))))))
       elif t.val==car:
         def _car(x0:Val)->Val:
           assert isinstance(x0,Val)
-          assert x0.typ==VType.List
-          assert isinstance(x0.val,list)
-          if len(x0.val)==0:
-            return _ERR(f"Applying _car to the empty list")
-          else:
-            return x0.val[0]
+          assert x0.typ==VType.Tuple
+          assert isinstance(x0.val,tuple)
+          return x0.val[0]
         stack.append(Val(VType.TLam, Lam(chkerr1(_car))))
 
       elif t.val==cdr:
         def _cdr(x0:Val)->Val:
           assert isinstance(x0,Val)
-          assert x0.typ==VType.List
-          assert isinstance(x0.val,list)
-          if len(x0.val)==0:
-            return _ERR(f"Applying _cdr to the empty list")
-          else:
-            return Val(VType.List, x0.val[1:])
+          assert x0.typ==VType.Tuple
+          assert isinstance(x0.val,tuple)
+          return x0.val[1]
         stack.append(Val(VType.TLam, Lam(chkerr1(_cdr))))
 
       elif t.val==isnil:
-        def _isnil(v):
-          if v.typ!=VType.List:
-            return _ERR(f"Expected list, but got {v.typ}")
-          assert isinstance(v.val,list)
-          return _T if len(v.val)==0 else _F
+        def _isnil(v:Val)->Val:
+          return _T if v.typ==VType.Nil else _F
         stack.append(Val(VType.TLam, Lam(chkerr1(_isnil))))
 
       elif t.val==if0:
@@ -413,6 +412,79 @@ def interp_test(hint:str, test:str)->None:
     assert val_test is not val_ans
     assert val_test==val_ans, f"{val_test} != {val_ans}"
 
+Bit=int
 
-#   pass
+# HINT:
+# When it's expecting a number, seeing 11 as the first two bits creates a
+# deeper list. After a number has finished, and the list level is greater than
+# 0, a 11 continues a list, and a 00 ends the list, returning to a lower level
+# The behaviour still seems to be undefined for seeing 00 when it expects a
+# number
+
+@dataclass(frozen=True)
+class ModulatedVal:
+  # body:List[Bit] # like [0,1,0,1,...]
+  body:str # "01010101 ..."
+
+
+def nbits(i:int)->int:
+  acc=0
+  while i>0:
+    i=i>>1
+    acc+=1
+  return acc
+
+def nbits_mod4(i:int)->int:
+  return ((nbits(i)-1)//4)+1 if i>0 else 0
+
+def mod_int(i:int)->ModulatedVal:
+  acc=""
+  acc+=("01" if i>=0 else "10")
+  i=i if i>=0 else -i
+  nbits=nbits_mod4(i)
+  acc+=(nbits*"1")+"0"
+  acc+=str(format(i,'b').zfill(4*nbits) if i>0 else '')
+  return ModulatedVal(acc)
+
+
+def mod_val(v:Val)->ModulatedVal:
+  acc=""
+  if v.typ==VType.Tuple:
+    acc+="11"
+    acc+=mod_val(v.val[0]).body
+    acc+=mod_val(v.val[1]).body
+  elif v.typ==VType.Nil:
+    acc+="00"
+  elif v.typ==VType.Int:
+    acc+=mod_int(v.val).body
+  else:
+    raise ValueError(f"Can't modulate {v}")
+  return ModulatedVal(acc)
+
+
+def dem_int(s:str)->Tuple[int,int]:
+  """ Returns answer and num_bits parsed """
+  sign=1 if s[:2]=="01" else -1
+  nbits4=0
+  i=2
+  while s[i]=='1':
+    nbits4+=1; i+=1
+  if nbits4==0:
+    return (0,3)
+  i+=1 # pass last zero
+  num=s[i:i+nbits4*4]
+  # print('s', s, 'i',i ,'nbits4', nbits4, 'num:',num)
+  return (sign*int(num, 2), i+nbits4*4)
+
+def dem_val(s:str)->Tuple[Val,int]:
+  assert len(s)>=2, f"Cant decode {s}"
+  if s[:2]=="11":
+    a,sz=dem_val(s[2:])
+    b,sz2=dem_val(s[2+sz:])
+    return (mktuple(a,b),2+sz+sz2)
+  elif s[:2]=="00":
+    return mknil(),2
+  else:
+    i,sz=dem_int(s)
+    return mkint(i),sz
 
