@@ -38,6 +38,7 @@ B=Op('b',3)
 pwr2=Op('pwr2',2)
 I=Op('i',1)
 cons=Op('cons',2)
+vec=Op('vec',2)
 car=Op('car',2)
 cdr=Op('cdr',2)
 nil=Op('nil',1)
@@ -61,7 +62,9 @@ class TType(Enum):
   Op=3
   Ref=4
 
-Picture=List[Tuple[int,int]]
+@dataclass
+class Picture:
+  data:List[Tuple[int,int]]
 
 @dataclass(frozen=True)
 class Ref:
@@ -159,10 +162,13 @@ class VType(Enum):
 class Err:
   msg:str
 
+
+ValUnion=Union[int,Picture,List['Val'],Lam,bool,Err]
+
 @dataclass(frozen=True)
 class Val:
   typ:VType
-  val:Union[int,Picture,list,Lam,bool,Err]
+  val:ValUnion
 
 Stack=List[Val]
 
@@ -186,10 +192,22 @@ def aslam(v:Val)->Callable[[Val],Val]:
   return v.val.fn
 
 def checkerr(vals, lam)->Val:
+  """ DEPRECATED"""
   for v in vals:
+    assert isinstance(v, Val)
     if v.typ==VType.TErr:
       return v
   return lam(*vals)
+
+def chkerr1(lam:Callable[[Val],Val])->Callable[[Val],Val]:
+  def _lam(v:Val)->Val:
+    assert isinstance(v, Val)
+    if v.typ==VType.TErr:
+      return v
+    else:
+      return lam(v)
+  return _lam
+
 
 def div_c0(a, b):
   if (a >= 0) != (b >= 0) and a % b:
@@ -199,6 +217,13 @@ def div_c0(a, b):
 
 _T = Val(VType.TLam, Lam(lambda a: Val(VType.TLam, Lam(lambda b: a))))
 _F = Val(VType.TLam, Lam(lambda a: Val(VType.TLam, Lam(lambda b: b))))
+
+_ERR = lambda msg : Val(VType.TErr, msg)
+
+
+
+# _T = Val(VType.Bool, True)
+# _F = Val(VType.Bool, False)
 
 def interp_expr(expr:List[Token], s:State)->Stack:
   stack:Stack=[]
@@ -239,7 +264,7 @@ def interp_expr(expr:List[Token], s:State)->Stack:
       elif t.val==div:
         def _div(a,b):
           if b.typ==VType.Int and int(b.val)==0:
-            return Val(VType.TErr, f"Division by zero")
+            return _ERR(f"Division by zero")
           return checkerr([a,b], lambda a,b: div_c0(asint(a),asint(b)))
         stack.append(Val(VType.TLam,
                          Lam(lambda a: Val(VType.TLam,
@@ -258,7 +283,7 @@ def interp_expr(expr:List[Token], s:State)->Stack:
       elif t.val==pwr2:
         def _pwr2(v):
           if v.typ==VType.Int and int(v.val)<0:
-            return Val(VType.TErr, f"pwr2: {v.val}<0")
+            return _ERR(f"pwr2: {v.val}<0")
           else:
             return Val(VType.Int, checkerr([v], lambda v: 2**asint(v)))
         stack.append(Val(VType.TLam, Lam(_pwr2)))
@@ -286,26 +311,50 @@ def interp_expr(expr:List[Token], s:State)->Stack:
       elif t.val==I:
         stack.append(Val(VType.TLam,
                          Lam(lambda x0: x0)))
-      elif t.val==cons:
+      elif t.val==nil:
+        _e:List[Val]=[]
+        stack.append(Val(VType.List, _e))
+      elif t.val==cons or t.val==vec:
+        def _cons(x0,x1)->Val:
+          assert isinstance(x0,Val) and isinstance(x1,Val)
+          if x1.typ==VType.List:
+            assert isinstance(x1.val,list)
+            return Val(VType.List, [x0]+x1.val)
+          else:
+            return Val(VType.List, [x0,x1])
         stack.append(Val(VType.TLam,
                          Lam(lambda x0: Val(VType.TLam,
-                         Lam(lambda x1: Val(VType.TLam,
-                         Lam(lambda x2:
-                           aslam(aslam(x2)(x0))(x1)
-                         )))))))
+                         Lam(lambda x1: checkerr([x0,x1], _cons))))))
       elif t.val==car:
-        stack.append(Val(VType.TLam,
-                         Lam(lambda x0:
-                           aslam(x0)(_T)
-                         )))
-      elif t.val==nil:
-        stack.append(Val(VType.TLam,
-                         Lam(lambda x0: _T
-                         )))
-      # elif t.val==isnil:
-      #   stack.append(Val(VType.TLam,
-      #                    Lam(lambda x0: _T
-      #                    )))
+        def _car(x0:Val)->Val:
+          assert isinstance(x0,Val)
+          assert x0.typ==VType.List
+          assert isinstance(x0.val,list)
+          if len(x0.val)==0:
+            return _ERR(f"Applying _car to the empty list")
+          else:
+            return x0.val[0]
+        stack.append(Val(VType.TLam, Lam(chkerr1(_car))))
+
+      elif t.val==cdr:
+        def _cdr(x0:Val)->Val:
+          assert isinstance(x0,Val)
+          assert x0.typ==VType.List
+          assert isinstance(x0.val,list)
+          if len(x0.val)==0:
+            return _ERR(f"Applying _cdr to the empty list")
+          else:
+            return Val(VType.List, x0.val[1:])
+        stack.append(Val(VType.TLam, Lam(chkerr1(_cdr))))
+
+      elif t.val==isnil:
+        def _isnil(v):
+          if v.typ!=VType.List:
+            return _ERR(f"Expected list, but got {v.typ}")
+          assert isinstance(v.val,list)
+          return _T if len(v.val)==0 else _F
+        stack.append(Val(VType.TLam, Lam(chkerr1(_isnil))))
+
       elif t.val==ap:
         l=stack.pop()
         assert l.typ==VType.TLam
