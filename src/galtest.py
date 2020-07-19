@@ -26,6 +26,12 @@ from solution.lang import *
 #   ''')
 
 prog_test('''
+  :1 = ap ap cons 2 ap ap cons 1 ap ap cons 0 nil
+  :2 = nil
+  :3 = ap ap ap if0 ap ap ap isnil :1 0 1 33 ap cdr :3
+  ''', '33')
+
+prog_test('''
   :1 = i
   :2 = ap :1 1
   :3 = ap :1 10
