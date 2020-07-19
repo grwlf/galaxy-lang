@@ -3,26 +3,21 @@ from os.path import join
 
 from solution.lang import *
 
+# prog_test('''
+#   :1 = :2
+#   :2 = ap ap add :1 1
+#   ''', '33')
 
 
+# prog_test('''
+#   :1 = 32
+#   :2 = ap ap add :1 1
+#   ''', '33')
 
-prog_test('''
-  :1 = :2
-  :2 = ap ap add :1 1
-  ''', '33')
-
-
-prog_test('''
-  :1 = 32
-  :2 = ap ap add :1 1
-  ''', '33')
-
-
-
-run_test('isnil', '''
-  ap isnil nil   =   t
-  ap isnil ap ap cons 33 44   =   f
-  ''')
+# run_test('isnil', '''
+#   ap isnil nil   =   t
+#   ap isnil ap ap cons 33 44   =   f
+#   ''')
 
 run_test('add', '''
   #ap (ap ap add 1 1) 1 = 2
@@ -37,6 +32,7 @@ run_test('add', '''
   ap ap add 2 3   =   5
   ap ap add 3 5   =   8
   ''')
+
 
 run_test('eq', '''
   ap ap eq 33 33   =   t
@@ -182,14 +178,6 @@ run_test('if0', '''
   ap ap ap if0 0 33 42   =   33
   ap ap ap if0 1 33 42   =   42
   ''')
-
-
-
-
-
-
-
-
 
 
 

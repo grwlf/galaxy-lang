@@ -2,7 +2,7 @@ from typing import ( Union, List, Optional, Any, Callable, Dict, Tuple )
 from dataclasses import dataclass
 from collections import OrderedDict
 from ipdb import set_trace
-
+from contextlib import contextmanager
 
 #  ____
 # |  _ \ __ _ _ __ ___  ___
@@ -293,7 +293,9 @@ def div_c0(a, b):
   else:
     return a // b
 
-_ERR = lambda msg : Val(VType.Err, msg)
+def _ERR(msg):
+  set_trace()
+  return Val(VType.Err, msg)
 
 # FIXME: typed interpretation may reject some programs, like pwr2
 _T = Val(VType.Bool, True)
@@ -387,6 +389,11 @@ def load_program(src:str, m:Memory):
     v=load_expr(expr)
     m.space[ref]=v
 
+def isnf(v:Val)->bool:
+  # Fixme: waht about some Ops, like cobinators?
+  if v.typ in [VType.Ap, VType.Ref]:
+    return False
+  return True
 
 
 def interp(m:Memory, target:Ref, verbose:bool=True)->Val:
@@ -396,9 +403,31 @@ def interp(m:Memory, target:Ref, verbose:bool=True)->Val:
   def _getmem(r:Ref)->Val:
     return heap.get(r) or m.space[r]
 
+  def _nfn(r:Ref)->bool:
+    """ _NOT_ in normal form, with effect """
+    nonlocal queue
+    if not isnf(_getmem(r)):
+      queue.append(r)
+      return True
+    return False
+
+  # @contextmanager
+  # def _nf(o:Op, binds:List[int]):
+  #   nonlocal queue
+  #   acc=[]
+  #   for ref in [o.bind[i] for i in binds]:
+  #     v=_getmem(ref)
+  #     if isnf(v):
+  #       acc.append(v)
+  #     else:
+  #       queue.extend(acc)
+
+  #   if len(acc)==len(binds):
+  #     yield tuple(acc)
+
   queue.append(target)
   while len(queue)>0:
-    set_trace()
+    # set_trace()
 
     cur=queue.pop()
     v=_getmem(cur)
@@ -408,25 +437,6 @@ def interp(m:Memory, target:Ref, verbose:bool=True)->Val:
 
     if v.typ==VType.Ap:
       assert isinstance(v.val, Ap)
-      # varg=v.val.x
-      # if v.val.f.typ==VType.Lam:
-      #   assert isinstance(v.val.f.val, Lam)
-      #   lam=v.val.f.val
-      #   ref=newref('a')
-      #   heap[cur]=mkap(mkvref(ref),arg)
-      #   queue.append(cur)
-      #   heap[lam.pat]=arg
-      #   heap[ref]=lam.body
-      #   queue.append(cur)
-      # elif v.val.f.typ==VType.Ap:
-      #   assert isinstance(v.val.f.val, Ap)
-      #   ap=v.val.f.val
-      #   ref=newref('a')
-      #   heap[cur]=mkap(mklam(lambda pat:
-      #     ) )
-      # else:
-      #   pass
-
       branches:List[Val]=[]
       matched:Dict[Ref,Val]=OrderedDict()
       while v.typ==VType.Ap or v.typ==VType.Ref:
@@ -460,87 +470,84 @@ def interp(m:Memory, target:Ref, verbose:bool=True)->Val:
 
       # Arguments of `v`
       for ref,val in matched.items():
-        queue.append(ref)
+        # queue.append(ref)
         heap[ref]=val
     elif v.typ==VType.Op:
       assert isinstance(v.val, Op)
       o:Op=v.val
+      r=o.bind
+      a=[_getmem(i) for i in o.bind]
       try:
         if o.term==neg:
-          a=_getmem(o.bind[0])
-          heap[cur]=mkint(-asint(a))
+          if _nfn(r[0]):
+            continue
+          heap[cur]=mkint(-asint(a[0]))
         elif o.term==inc:
-          a=_getmem(o.bind[0])
-          heap[cur]=mkint(asint(a)+1)
+          if _nfn(r[0]):
+            continue
+          heap[cur]=mkint(asint(a[0])+1)
         elif o.term==dec:
-          a=_getmem(o.bind[0])
-          heap[cur]=mkint(asint(a)-1)
+          if _nfn(r[0]):
+            continue
+          heap[cur]=mkint(asint(a[0])-1)
         elif o.term==pwr2:
-          a=_getmem(o.bind[0])
-          if asint(a)<0:
+          if _nfn(r[0]):
+            continue
+          if asint(a[0])<0:
             heap[cur]=_ERR('pwr2 arg is less than zero')
           else:
-            heap[cur]=mkint(2**asint(a))
+            heap[cur]=mkint(2**asint(a[0]))
         elif o.term==add:
-          a=_getmem(o.bind[0])
-          b=_getmem(o.bind[1])
-          heap[cur]=mkint(asint(a)+asint(b))
+          if _nfn(r[0]) or _nfn(r[1]):
+            continue
+          heap[cur]=mkint(asint(a[0])+asint(a[1]))
         elif o.term==mul:
-          a=_getmem(o.bind[0])
-          b=_getmem(o.bind[1])
-          heap[cur]=mkint(asint(a)*asint(b))
+          if _nfn(r[0]) or _nfn(r[1]):
+            continue
+          heap[cur]=mkint(asint(a[0])*asint(a[1]))
         elif o.term==div:
-          a=_getmem(o.bind[0])
-          b=_getmem(o.bind[1])
-          heap[cur]=mkint(div_c0(asint(a),asint(b)))
+          if _nfn(r[0]) or _nfn(r[1]):
+            continue
+          heap[cur]=mkint(div_c0(asint(a[0]),asint(a[1])))
         elif o.term==eq:
-          a=_getmem(o.bind[0])
-          b=_getmem(o.bind[1])
-          if a.typ==b.typ:
-            heap[cur]=_T if a.val==b.val else _F
+          if _nfn(r[0]) or _nfn(r[1]):
+            continue
+          if a[0].typ==a[1].typ:
+            heap[cur]=_T if a[0].val==a[1].val else _F
           else:
             heap[cur]=_F
         elif o.term==C:
-          a=_getmem(o.bind[0])
-          b=_getmem(o.bind[1])
-          c=_getmem(o.bind[2])
-          heap[cur]=mkap(mkap(a,b),c)
+          heap[cur]=mkap(mkap(a[0],a[1]),a[2])
         elif o.term==S:
-          a=_getmem(o.bind[0])
-          b=_getmem(o.bind[1])
-          c=_getmem(o.bind[2])
-          heap[cur]=mkap(mkap(a,c),mkap(b,c))
+          heap[cur]=mkap(mkap(a[0],a[2]),mkap(a[1],a[2]))
         elif o.term==B:
-          a=_getmem(o.bind[0])
-          b=_getmem(o.bind[1])
-          c=_getmem(o.bind[2])
-          heap[cur]=mkap(a,mkap(b,c))
+          heap[cur]=mkap(a[0],mkap(a[1],a[2]))
         elif o.term==I:
-          a=_getmem(o.bind[0])
-          heap[cur]=a
+          heap[cur]=a[0]
         elif o.term==cons:
-          a=_getmem(o.bind[0])
-          b=_getmem(o.bind[1])
-          # c=_getmem(o.bind[2])
-          heap[cur]=mktuple(a,b)
+          if _nfn(r[0]) or _nfn(r[1]):
+            continue
+          heap[cur]=mktuple(a[0],a[1])
           # heap[cur]=mkap(mkap(c,a),b)
         elif o.term==car:
-          a=_getmem(o.bind[0])
-          heap[cur]=astuple(a)[0]
+          if _nfn(r[0]):
+            continue
+          heap[cur]=astuple(a[0])[0]
           # heap[cur]=mkap(a,_T)
         elif o.term==cdr:
-          a=_getmem(o.bind[0])
-          heap[cur]=astuple(a)[1]
+          if _nfn(r[0]):
+            continue
+          heap[cur]=astuple(a[0])[1]
           # heap[cur]=mkap(a,_F)
         elif o.term==isnil:
-          a=_getmem(o.bind[0])
+          if _nfn(r[0]):
+            continue
           # set_trace()
-          heap[cur]=_T if a==_NIL else _F
+          heap[cur]=_T if a[0]==_NIL else _F
         elif o.term==if0:
-          a=_getmem(o.bind[0])
-          b=_getmem(o.bind[1])
-          c=_getmem(o.bind[2])
-          heap[cur]=b if asint(a)==0 else c
+          if _nfn(r[0]):
+            continue
+          heap[cur]=a[1] if asint(a[0])==0 else a[2]
         else:
           raise NotImplementedError(f"Can't op {o}, Help!")
       except ValueError as e:
