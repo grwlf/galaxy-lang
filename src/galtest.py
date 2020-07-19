@@ -177,7 +177,7 @@ run_test('i', '''
 run_test('car', '''
   ap car ap ap cons 33 42   =   33
   ap car ap ap cons 33 42   =   33
-  # ap car i   =   ap i t
+  ap car i   =   ap i t
   ''')
 
 run_test('cdr', '''
@@ -190,7 +190,7 @@ run_test('cons', '''
   ''')
 
 run_test('nil', '''
-  # ap nil 33   =   t
+  ap nil 33   =   t
   ''')
 
 run_test('isnil', '''

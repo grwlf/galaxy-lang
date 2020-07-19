@@ -45,7 +45,7 @@ C=Term('c',3)
 B=Term('b',3)
 pwr2=Term('pwr2',1)
 I=Term('i',1)
-cons=Term('cons',2)
+cons=Term('cons',3)
 vec=Term('vec',2)
 car=Term('car',1)
 cdr=Term('cdr',1)
@@ -300,10 +300,10 @@ def _ERR(msg):
 # FIXME: typed interpretation may reject some programs, like pwr2
 # _T = Val(VType.Bool, True)
 # _F = Val(VType.Bool, False)
-_NIL = mknil()
+# _NIL = mknil()
 _T = mklam(lambda a: mklam(lambda b: mkvref(a)))
 _F = mklam(lambda a: mklam(lambda b: mkvref(b)))
-# _NIL = mklam(lambda a: _T)
+_NIL = mklam(lambda a: _T)
 
 # def isnil(v:Val)->bool:
 #   if v.typ!=VType.Lam:
@@ -524,25 +524,26 @@ def interp(m:Memory, target:Ref, h:Optional[Memspace]=None)->Tuple[Val,Memspace]
         elif o.term==I:
           heap[cur]=a[0]
         elif o.term==cons:
-          if _nfn(r[0]) or _nfn(r[1]):
-            continue
-          heap[cur]=mktuple(a[0],a[1])
-          # heap[cur]=mkap(mkap(c,a),b)
+          # if _nfn(r[0]) or _nfn(r[1]):
+          #   continue
+          # heap[cur]=mktuple(a[0],a[1])
+          heap[cur]=mkap(mkap(a[2],a[0]),a[1])
         elif o.term==car:
-          if _nfn(r[0]):
-            continue
-          heap[cur]=astuple(a[0])[0]
-          # heap[cur]=mkap(a,_T)
+          # if _nfn(r[0]):
+          #   continue
+          # heap[cur]=astuple(a[0])[0]
+          heap[cur]=mkap(a[0],_T)
         elif o.term==cdr:
-          if _nfn(r[0]):
-            continue
-          heap[cur]=astuple(a[0])[1]
-          # heap[cur]=mkap(a,_F)
+          # if _nfn(r[0]):
+          #   continue
+          # heap[cur]=astuple(a[0])[1]
+          heap[cur]=mkap(a[0],_F)
         elif o.term==isnil:
-          if _nfn(r[0]):
-            continue
+          # if _nfn(r[0]):
+          #   continue
           # set_trace() FIXME: how to implement in car/cdr?
-          heap[cur]=_T if a[0]==_NIL else _F
+          # heap[cur]=_T if a[0]==_NIL else _F
+          heap[cur]=mkap(a[0],mkap(_T, mkap(_T,_F)))
         elif o.term==if0:
           if _nfn(r[0]):
             continue
