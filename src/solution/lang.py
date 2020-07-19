@@ -398,27 +398,32 @@ def isnf(v:Val)->bool:
   return True
 
 def interp(m:Memory, target:Ref, h:Optional[Memspace]=None)->Tuple[Val,Memspace]:
-  heap={} if h is None else eh
+  heap={} if h is None else h
   queue:List[Ref]=[]
 
   def _getmem(r:Ref)->Val:
     return heap.get(r) or m.space[r]
 
-  def _nfn(r:Ref)->bool:
-    """ _NOT_ in normal form, with effect """
+  def _addqueue(v:Ref)->None:
     nonlocal queue
-    if not isnf(_getmem(r)):
-      queue.append(r)
-      return True
-    return False
+    queue.append(v)
 
-  queue.append(target)
+  _addqueue(target)
   while len(queue)>0:
 
     # set_trace()
 
-    cur=queue.pop()
+    cur=queue.pop();
     v=_getmem(cur)
+
+    def _nfn(r:Ref)->bool:
+      """ _NOT_ in normal form, with effect """
+      if not isnf(_getmem(r)):
+        _addqueue(cur)
+        _addqueue(r)
+        return True
+      return False
+
 
     if v.typ==VType.Ap:
       assert isinstance(v.val, Ap)
@@ -446,16 +451,16 @@ def interp(m:Memory, target:Ref, h:Optional[Memspace]=None)->Tuple[Val,Memspace]
       v2=mkvref(ref)
       for b in reversed(branches):
         v2=mkap(v2,b)
-      queue.append(cur)
+      _addqueue(cur)
       heap[cur]=v2
 
       # Leaf `v` with matched patterns
-      queue.append(ref)
+      _addqueue(ref)
       heap[ref]=v
 
       # Arguments of `v`
       for ref,val in matched.items():
-        # queue.append(ref)
+        # _addqueue(ref)
         heap[ref]=val
     elif v.typ==VType.Op:
       assert isinstance(v.val, Op)
@@ -544,7 +549,7 @@ def interp(m:Memory, target:Ref, h:Optional[Memspace]=None)->Tuple[Val,Memspace]
       pass
     elif v.typ==VType.Ref:
       heap[cur]=_getmem(v.val)
-      queue.append(cur)
+      _addqueue(cur)
     elif v.typ==VType.Err:
       set_trace()
       pass

@@ -9,8 +9,9 @@ from solution.lang import *
 #   ''', '33')
 
 # prog_test('''
-#   :1 = ap if0 :2 0 :2
-#   :2 = ap dec :1
+#   :1 = 10
+#   :2 = 4
+#   :3 = if0 :2 ap dec :2
 #   ''', '33')
 
 
@@ -23,6 +24,14 @@ from solution.lang import *
 #   ap isnil nil   =   t
 #   ap isnil ap ap cons 33 44   =   f
 #   ''')
+
+prog_test('''
+  :1 = i
+  :2 = ap :1 1
+  :3 = ap :1 10
+  :4 = ap ap add :2 :3
+  ''', '11')
+
 
 run_test('add', '''
   #ap (ap ap add 1 1) 1 = 2
