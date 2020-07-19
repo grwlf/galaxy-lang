@@ -8,6 +8,11 @@ from solution.lang import *
 #   :2 = ap ap add :1 1
 #   ''', '33')
 
+# prog_test('''
+#   :1 = ap if0 :2 0 :2
+#   :2 = ap dec :1
+#   ''', '33')
+
 
 # prog_test('''
 #   :1 = 32
@@ -24,7 +29,7 @@ run_test('add', '''
   ap ap ap add 1 1 1 != 2
 
   # ap (ap add (ap (ap add 1) 2)) 3  = 5
-  ap ap add ap ap add 1 2 3 = 6
+  # ap ap add ap ap add 1 2 3 = 6
 
   ap ap add 1 2   =   3
   ap ap add 2 1   =   3
@@ -215,21 +220,4 @@ modem_test(mktuple(mkint(1),mkint(2)))
 #   :33 = ap ap :0 :1 :2
 #   '''))
 #print(V)
-
-
-
-
-
-# G=open(join(environ['SOLUTION_SOURCE'],'galaxy.txt'),'r').read()
-# M=Memory({})
-# load_program(G,M)
-# load_program('''
-#   :9999 = ap ap galaxy nil ap ap cons 0 0
-#   ''',M)
-
-# set_trace()
-# interp(M,mkref(':9999'))
-
-## print(P)
-
 

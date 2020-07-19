@@ -298,11 +298,11 @@ def _ERR(msg):
   return Val(VType.Err, msg)
 
 # FIXME: typed interpretation may reject some programs, like pwr2
-_T = Val(VType.Bool, True)
-_F = Val(VType.Bool, False)
+# _T = Val(VType.Bool, True)
+# _F = Val(VType.Bool, False)
 _NIL = mknil()
-# _T = mklam(lambda a: mklam(lambda b: mkvref(a)))
-# _F = mklam(lambda a: mklam(lambda b: mkvref(b)))
+_T = mklam(lambda a: mklam(lambda b: mkvref(a)))
+_F = mklam(lambda a: mklam(lambda b: mkvref(b)))
 # _NIL = mklam(lambda a: _T)
 
 # def isnil(v:Val)->bool:
@@ -354,9 +354,11 @@ def load_expr(expr:List[Token])->Val:
 
 
 
+Memspace=Dict[Ref,Val]
+
 @dataclass
 class Memory:
-  space:Dict[Ref,Val]
+  space:Memspace
 
 def mkmem()->Memory:
   return Memory({})
@@ -382,7 +384,7 @@ def ppr(x:Any)->None:
   else:
     assert False, f"Can't print {x}, Help!"
 
-def load_program(src:str, m:Memory):
+def load_program(m:Memory, src:str):
   """ Mutatas existing memory or builds a new one by adding new expressions """
   p=parse_program(src)
   for i,(ref,expr) in enumerate(p.body.items()):
@@ -391,13 +393,12 @@ def load_program(src:str, m:Memory):
 
 def isnf(v:Val)->bool:
   # Fixme: waht about some Ops, like cobinators?
-  if v.typ in [VType.Ap, VType.Ref]:
+  if v.typ in [VType.Ap, VType.Ref, VType.Op]:
     return False
   return True
 
-
-def interp(m:Memory, target:Ref, verbose:bool=True)->Val:
-  heap:Dict[Ref,Val]={}
+def interp(m:Memory, target:Ref, h:Optional[Memspace]=None)->Tuple[Val,Memspace]:
+  heap={} if h is None else eh
   queue:List[Ref]=[]
 
   def _getmem(r:Ref)->Val:
@@ -411,29 +412,13 @@ def interp(m:Memory, target:Ref, verbose:bool=True)->Val:
       return True
     return False
 
-  # @contextmanager
-  # def _nf(o:Op, binds:List[int]):
-  #   nonlocal queue
-  #   acc=[]
-  #   for ref in [o.bind[i] for i in binds]:
-  #     v=_getmem(ref)
-  #     if isnf(v):
-  #       acc.append(v)
-  #     else:
-  #       queue.extend(acc)
-
-  #   if len(acc)==len(binds):
-  #     yield tuple(acc)
-
   queue.append(target)
   while len(queue)>0:
+
     # set_trace()
 
     cur=queue.pop()
     v=_getmem(cur)
-
-    if verbose:
-      print(cur)
 
     if v.typ==VType.Ap:
       assert isinstance(v.val, Ap)
@@ -542,7 +527,7 @@ def interp(m:Memory, target:Ref, verbose:bool=True)->Val:
         elif o.term==isnil:
           if _nfn(r[0]):
             continue
-          # set_trace()
+          # set_trace() FIXME: how to implement in car/cdr?
           heap[cur]=_T if a[0]==_NIL else _F
         elif o.term==if0:
           if _nfn(r[0]):
@@ -566,11 +551,11 @@ def interp(m:Memory, target:Ref, verbose:bool=True)->Val:
     else:
       raise NotImplementedError(f"Can't value {v}, Help!")
 
-  return _getmem(target)
+  return _getmem(target), heap
 
-def interp_expr(v:Val)->Val:
+def interp_expr(v:Val)->Tuple[Val,Memspace]:
   m=Memory({mkref('tgt'):v})
-  return interp(m,mkref('tgt'),verbose=False)
+  return interp(m,mkref('tgt'))
 
 
 # def interp(v:Val)->Val:
@@ -616,8 +601,8 @@ def run_test(hint:str, test:str)->None:
       val_test=load_expr(parse_expr(expr_test))
       val_ans=load_expr(parse_expr(expr_ans))
 
-      redex_test=interp_expr(val_test)
-      redex_ans=interp_expr(val_ans)
+      redex_test,_=interp_expr(val_test)
+      redex_ans,_=interp_expr(val_ans)
       if pos:
         assert redex_test==redex_ans, f"{pval(redex_test)} != {pval(redex_ans)}"
       else:
@@ -634,9 +619,9 @@ def run_test(hint:str, test:str)->None:
 
 def prog_test(prog:str, expr:str)->None:
   m=Memory({})
-  load_program(prog,m)
-  redex_test=interp(m,list(m.space.keys())[-1])
-  redex_ans=interp_expr(load_expr(parse_expr(expr)))
+  load_program(m,prog)
+  redex_test,_=interp(m,list(m.space.keys())[-1])
+  redex_ans,_=interp_expr(load_expr(parse_expr(expr)))
   assert redex_test==redex_ans, f"{pval(redex_test)} != {pval(redex_ans)}"
 
 
