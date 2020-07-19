@@ -32,6 +32,10 @@ prog_test('''
   :4 = ap ap add :2 :3
   ''', '11')
 
+prog_test('''
+  :1 = inc
+  :4 = ap ap ap b :1 :1 1
+  ''', '2')
 
 run_test('add', '''
   #ap (ap ap add 1 1) 1 = 2

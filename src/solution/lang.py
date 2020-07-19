@@ -402,10 +402,19 @@ def interp(m:Memory, target:Ref, h:Optional[Memspace]=None)->Tuple[Val,Memspace]
   queue:List[Ref]=[]
 
   def _getmem(r:Ref)->Val:
-    return heap.get(r) or m.space[r]
+    while True:
+      v=heap.get(r, m.space.get(r,None))
+      if v is None:
+        set_trace()
+      if v.typ==VType.Ref:
+        r=v.val
+      else:
+        return v
 
   def _addqueue(v:Ref)->None:
     nonlocal queue
+    if v in queue:
+      print(f'Recursion detected on {v}')
     queue.append(v)
 
   _addqueue(target)
@@ -548,8 +557,7 @@ def interp(m:Memory, target:Ref, h:Optional[Memspace]=None)->Tuple[Val,Memspace]
          v.typ==VType.Nil:
       pass
     elif v.typ==VType.Ref:
-      heap[cur]=_getmem(v.val)
-      _addqueue(cur)
+      assert False, f"Unexpected ref {v}"
     elif v.typ==VType.Err:
       set_trace()
       pass
