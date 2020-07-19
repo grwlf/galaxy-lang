@@ -25,11 +25,11 @@ from solution.lang import *
 #   ap isnil ap ap cons 33 44   =   f
 #   ''')
 
-prog_test('''
-  :1 = ap ap cons 2 ap ap cons 1 ap ap cons 0 nil
-  :2 = nil
-  :3 = ap ap ap if0 ap ap ap isnil :1 0 1 33 ap cdr :3
-  ''', '33')
+# prog_test('''
+#   :1 = ap ap cons 2 ap ap cons 1 ap ap cons 0 nil
+#   :2 = nil
+#   :3 = ap ap ap if0 ap ap ap isnil :1 0 1 33 ap cdr :3
+#   ''', '33')
 
 prog_test('''
   :1 = i
