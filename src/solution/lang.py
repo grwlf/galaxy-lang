@@ -43,12 +43,12 @@ ap=Term('ap',2)
 S=Term('s',3)
 C=Term('c',3)
 B=Term('b',3)
-pwr2=Term('pwr2',2)
+pwr2=Term('pwr2',1)
 I=Term('i',1)
 cons=Term('cons',2)
 vec=Term('vec',2)
-car=Term('car',2)
-cdr=Term('cdr',2)
+car=Term('car',1)
+cdr=Term('cdr',1)
 isnil=Term('isnil',1)
 draw=Term('draw',1) # [x,y]->img
 checkerboard=Term('checkerboard',2)
@@ -79,10 +79,10 @@ class Ref:
   to:str
 
 def isref(s:str)->bool:
-  return len(s)>0 and s[0].isalpha() and (s not in TERMS)
+  return len(s)>0 and (s[0].isalpha() or s[0]==':') and (s not in TERMS)
 
 def mkref(s:str)->Ref:
-  assert isref(s)
+  assert isref(s), f"{s}"
   return Ref(s)
 
 REFIDX:int=0
@@ -211,9 +211,18 @@ def mklam(body:Callable[[Ref],Val])->Val:
 
 def asint(v:Val)->int:
   assert isinstance(v,Val)
-  assert v.typ==VType.Int, f"{v.typ}"
-  assert isinstance(v.val,int), f"{v.val}"
+  if v.typ!=VType.Int:
+    raise ValueError(f"{v} is not an int!")
+  assert isinstance(v.val,int), f"{v}"
   return int(v.val)
+
+def astuple(v:Val)->Tuple[Val,Val]:
+  assert isinstance(v,Val)
+  if v.typ!=VType.Tuple:
+    raise ValueError(f"{v} is not a tuple!")
+  assert isinstance(v.val,tuple), f"{v}"
+  return v.val
+
 
 Stack=List[Val]
 
@@ -235,6 +244,8 @@ def mkop(t:Term, binds:List[Ref])->Val:
 def mkap(f:Val, x:Val)->Val:
   return Val(VType.Ap, Ap(f,x))
 
+def mkvref(r:Ref)->Val:
+  return Val(VType.Ref, r)
 
 def pval(v:Val)->str:
   if v.typ==VType.Int:
@@ -287,8 +298,14 @@ _ERR = lambda msg : Val(VType.Err, msg)
 # FIXME: typed interpretation may reject some programs, like pwr2
 _T = Val(VType.Bool, True)
 _F = Val(VType.Bool, False)
-# _T = Val(VType.Lam, mklam(lambda a: Val(VType.Lam, mklam(lambda b: a))))
-# _F = Val(VType.Lam, mklam(lambda a: Val(VType.Lam, mklam(lambda b: b))))
+_NIL = mknil()
+# _T = mklam(lambda a: mklam(lambda b: mkvref(a)))
+# _F = mklam(lambda a: mklam(lambda b: mkvref(b)))
+# _NIL = mklam(lambda a: _T)
+
+# def isnil(v:Val)->bool:
+#   if v.typ!=VType.Lam:
+#     return False
 
 def load_expr(expr:List[Token])->Val:
   def _lam1(op):
@@ -313,7 +330,7 @@ def load_expr(expr:List[Token])->Val:
       elif t.val==F:
         stack.append(_F)
       elif t.val==nil:
-        stack.append(mknil())
+        stack.append(_NIL)
       elif t.val==ap:
         f=stack.pop()
         x=stack.pop()
@@ -372,23 +389,50 @@ def load_program(src:str, m:Memory):
 
 
 
-def interp(m:Memory, target:Ref)->Val:
+def interp(m:Memory, target:Ref, verbose:bool=True)->Val:
   heap:Dict[Ref,Val]={}
   queue:List[Ref]=[]
 
   def _getmem(r:Ref)->Val:
     return heap.get(r) or m.space[r]
 
-  set_trace()
-
   queue.append(target)
   while len(queue)>0:
+    set_trace()
+
     cur=queue.pop()
     v=_getmem(cur)
+
+    if verbose:
+      print(cur)
+
     if v.typ==VType.Ap:
+      assert isinstance(v.val, Ap)
+      # varg=v.val.x
+      # if v.val.f.typ==VType.Lam:
+      #   assert isinstance(v.val.f.val, Lam)
+      #   lam=v.val.f.val
+      #   ref=newref('a')
+      #   heap[cur]=mkap(mkvref(ref),arg)
+      #   queue.append(cur)
+      #   heap[lam.pat]=arg
+      #   heap[ref]=lam.body
+      #   queue.append(cur)
+      # elif v.val.f.typ==VType.Ap:
+      #   assert isinstance(v.val.f.val, Ap)
+      #   ap=v.val.f.val
+      #   ref=newref('a')
+      #   heap[cur]=mkap(mklam(lambda pat:
+      #     ) )
+      # else:
+      #   pass
+
       branches:List[Val]=[]
       matched:Dict[Ref,Val]=OrderedDict()
-      while v.typ==VType.Ap:
+      while v.typ==VType.Ap or v.typ==VType.Ref:
+        if v.typ==VType.Ref:
+          v=_getmem(v.val)
+          continue
         assert isinstance(v.val, Ap)
         branches.append(v.val.x)
         v=v.val.f
@@ -399,15 +443,18 @@ def interp(m:Memory, target:Ref)->Val:
         matched[v.val.pat]=branches.pop()
         v=v.val.body
 
+      if v.typ in [VType.Int, VType.Bool, VType.Tuple, VType.Err, VType.Nil]:
+        raise ValueError(f"Error! Can't apply to '{pval(v)}'")
+
       # Split current target in two
       ref=newref('e')
-      v2=Val(VType.Ref, ref)
+      v2=mkvref(ref)
       for b in reversed(branches):
         v2=mkap(v2,b)
       queue.append(cur)
       heap[cur]=v2
 
-      # Our op `v` with matched patterns
+      # Leaf `v` with matched patterns
       queue.append(ref)
       heap[ref]=v
 
@@ -415,49 +462,108 @@ def interp(m:Memory, target:Ref)->Val:
       for ref,val in matched.items():
         queue.append(ref)
         heap[ref]=val
-
-    elif v.typ==VType.Lam:
-      assert isinstance(v.val, Lam)
-      assert False
     elif v.typ==VType.Op:
       assert isinstance(v.val, Op)
       o:Op=v.val
-      if o.term==neg:
-        a=_getmem(o.bind[0])
-        heap[cur]=mkint(-asint(a))
-      elif o.term==add:
-        a=_getmem(o.bind[0])
-        b=_getmem(o.bind[1])
-        heap[cur]=mkint(asint(a)+asint(b))
-      elif o.term==mul:
-        a=_getmem(o.bind[0])
-        b=_getmem(o.bind[1])
-        heap[cur]=mkint(asint(a)*asint(b))
-      elif o.term==div:
-        a=_getmem(o.bind[0])
-        b=_getmem(o.bind[1])
-        heap[cur]=mkint(div_c0(asint(a),asint(b)))
-      elif o.term==eq:
-        a=_getmem(o.bind[0])
-        b=_getmem(o.bind[1])
-        if a.typ==b.typ:
-          heap[cur]=_T if a.val==b.val else _F
+      try:
+        if o.term==neg:
+          a=_getmem(o.bind[0])
+          heap[cur]=mkint(-asint(a))
+        elif o.term==inc:
+          a=_getmem(o.bind[0])
+          heap[cur]=mkint(asint(a)+1)
+        elif o.term==dec:
+          a=_getmem(o.bind[0])
+          heap[cur]=mkint(asint(a)-1)
+        elif o.term==pwr2:
+          a=_getmem(o.bind[0])
+          if asint(a)<0:
+            heap[cur]=_ERR('pwr2 arg is less than zero')
+          else:
+            heap[cur]=mkint(2**asint(a))
+        elif o.term==add:
+          a=_getmem(o.bind[0])
+          b=_getmem(o.bind[1])
+          heap[cur]=mkint(asint(a)+asint(b))
+        elif o.term==mul:
+          a=_getmem(o.bind[0])
+          b=_getmem(o.bind[1])
+          heap[cur]=mkint(asint(a)*asint(b))
+        elif o.term==div:
+          a=_getmem(o.bind[0])
+          b=_getmem(o.bind[1])
+          heap[cur]=mkint(div_c0(asint(a),asint(b)))
+        elif o.term==eq:
+          a=_getmem(o.bind[0])
+          b=_getmem(o.bind[1])
+          if a.typ==b.typ:
+            heap[cur]=_T if a.val==b.val else _F
+          else:
+            heap[cur]=_F
+        elif o.term==C:
+          a=_getmem(o.bind[0])
+          b=_getmem(o.bind[1])
+          c=_getmem(o.bind[2])
+          heap[cur]=mkap(mkap(a,b),c)
+        elif o.term==S:
+          a=_getmem(o.bind[0])
+          b=_getmem(o.bind[1])
+          c=_getmem(o.bind[2])
+          heap[cur]=mkap(mkap(a,c),mkap(b,c))
+        elif o.term==B:
+          a=_getmem(o.bind[0])
+          b=_getmem(o.bind[1])
+          c=_getmem(o.bind[2])
+          heap[cur]=mkap(a,mkap(b,c))
+        elif o.term==I:
+          a=_getmem(o.bind[0])
+          heap[cur]=a
+        elif o.term==cons:
+          a=_getmem(o.bind[0])
+          b=_getmem(o.bind[1])
+          # c=_getmem(o.bind[2])
+          heap[cur]=mktuple(a,b)
+          # heap[cur]=mkap(mkap(c,a),b)
+        elif o.term==car:
+          a=_getmem(o.bind[0])
+          heap[cur]=astuple(a)[0]
+          # heap[cur]=mkap(a,_T)
+        elif o.term==cdr:
+          a=_getmem(o.bind[0])
+          heap[cur]=astuple(a)[1]
+          # heap[cur]=mkap(a,_F)
+        elif o.term==isnil:
+          a=_getmem(o.bind[0])
+          # set_trace()
+          heap[cur]=_T if a==_NIL else _F
+        elif o.term==if0:
+          a=_getmem(o.bind[0])
+          b=_getmem(o.bind[1])
+          c=_getmem(o.bind[2])
+          heap[cur]=b if asint(a)==0 else c
         else:
-          heap[cur]=_F
-      else:
-        raise ValueError(f"Can't op {o}, Help!")
-    elif v.typ==VType.Int or v.typ==VType.Bool:
+          raise NotImplementedError(f"Can't op {o}, Help!")
+      except ValueError as e:
+        heap[cur]=_ERR(str(e))
+
+    elif v.typ==VType.Int or v.typ==VType.Bool or \
+         v.typ==VType.Lam or v.typ==VType.Tuple or \
+         v.typ==VType.Nil:
       pass
     elif v.typ==VType.Ref:
       heap[cur]=_getmem(v.val)
+      queue.append(cur)
+    elif v.typ==VType.Err:
+      set_trace()
+      pass
     else:
-      raise ValueError(f"Can't value {v}, Help!")
+      raise NotImplementedError(f"Can't value {v}, Help!")
 
   return _getmem(target)
 
 def interp_expr(v:Val)->Val:
   m=Memory({mkref('tgt'):v})
-  return interp(m,mkref('tgt'))
+  return interp(m,mkref('tgt'),verbose=False)
 
 
 # def interp(v:Val)->Val:
@@ -497,16 +603,34 @@ def run_test(hint:str, test:str)->None:
     if len(tl.strip())==0 or tl.strip()[0]=='#':
       continue
     print(f"Checking line {i:02d}: {tl.strip()}")
-    expr_test,expr_ans=tl.split('=')
-    val_test=load_expr(parse_expr(expr_test))
-    val_ans=load_expr(parse_expr(expr_ans))
+    pos= not ('!=' in tl)
+    expr_test,expr_ans=tl.split('=' if pos else '!=')
+    try:
+      val_test=load_expr(parse_expr(expr_test))
+      val_ans=load_expr(parse_expr(expr_ans))
 
-    redex_test=interp_expr(val_test)
-    redex_ans=interp_expr(val_ans)
-    assert redex_test==redex_ans, f"{redex_test} != {redex_ans}"
+      redex_test=interp_expr(val_test)
+      redex_ans=interp_expr(val_ans)
+      if pos:
+        assert redex_test==redex_ans, f"{pval(redex_test)} != {pval(redex_ans)}"
+      else:
+        set_trace()
+        assert redex_test!=redex_ans, (f"{pval(redex_test)} == {pval(redex_ans)}, "
+                                      "but it shouldn't")
+    except KeyboardInterrupt:
+      raise
+    except AssertionError:
+      raise
+    except Exception as e:
+      if pos:
+        raise
 
-
-
+def prog_test(prog:str, expr:str)->None:
+  m=Memory({})
+  load_program(prog,m)
+  redex_test=interp(m,list(m.space.keys())[-1])
+  redex_ans=interp_expr(load_expr(parse_expr(expr)))
+  assert redex_test==redex_ans, f"{pval(redex_test)} != {pval(redex_ans)}"
 
 
 #  __  __           _
