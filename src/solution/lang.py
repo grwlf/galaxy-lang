@@ -510,7 +510,7 @@ def interp(m:Memory, target:Ref, h:Optional[Memspace]=None)->Tuple[Val,Memspace]
         v=v.val.body
 
       if v.typ in [VType.Int, VType.Bool, VType.Tuple, VType.Err, VType.Nil]:
-        raise ValueError(f"Error! Can't apply to '{pval(v)}'")
+        raise ValueError(f"Error! Can't apply to {v.typ} '{pval(v)}'")
 
       # Split current target in two
       # Re-queue the AP head with unmatched patterns
