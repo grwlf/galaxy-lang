@@ -13,6 +13,8 @@ load_program(M,'''
   :9999 = ap ap galaxy nil ap ap cons 0 0
   ''')
 
+rgal=mkref(':9999')
+
 # xxx = ap ap galaxy :v1 ap ap cons 0 nil
 # set_trace()
 # print('A', pval(A[0]))
@@ -90,9 +92,7 @@ def draw(M:Memory):
   rg2,g2=_eval(f"ap car ap cdr {rgal.to}")
   rg3,g3=_eval(f"ap car ap cdr ap cdr {rgal.to}", 'list of list of points')
 
-  r=rg3
-
-  imgs=maplist(M,heap,r,unimg)
+  imgs=maplist(M,heap,rg3,unimg)
   return imgs
 
   # while True:

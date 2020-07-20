@@ -1,4 +1,4 @@
-from typing import ( Union, List, Optional, Any, Callable, Dict, Tuple )
+from typing import ( Union, List, Optional, Any, Callable, Dict, Tuple, Set )
 from dataclasses import dataclass
 from collections import OrderedDict
 from ipdb import set_trace
@@ -311,6 +311,19 @@ def substitute(v:Val, pats:Dict[Ref,Ref]):
   return traverse(_fv(v),_fv)
 
 
+def scanrefs(v:Val)->Set[Ref]:
+  acc=set()
+  def _fv(v):
+    nonlocal acc
+    if v.typ==VType.Ref:
+      acc.add(v.val)
+    elif v.typ==VType.Op:
+      acc |= set (v.val.bind)
+    return v
+  traverse(_fv(v),_fv)
+  return acc
+
+
 def checkerr(vals, lam)->Val:
   """ DEPRECATED"""
   for v in vals:
@@ -525,7 +538,7 @@ def interp(m:Memory, target:Ref, h:Optional[Memspace]=None)->Tuple[Val,Memspace]
       _addqueue(rleaf)
       subst={}
       for ref,val in matched.items():
-        ref2=newref()
+        ref2=newref('A')
         heap[ref2]=val
         subst[ref]=ref2
       heap[rleaf]=substitute(v,subst)
@@ -629,6 +642,34 @@ def interp(m:Memory, target:Ref, h:Optional[Memspace]=None)->Tuple[Val,Memspace]
       raise NotImplementedError(f"Can't value {v}, Help!")
 
   return _getmem(target), heap
+
+
+def closure(h:Memspace, whitelist:List[Ref])->Set[Ref]:
+  visited=set()
+  frontier=set(whitelist)
+  missing=set()
+  while frontier:
+    r=frontier.pop()
+    visited.add(r)
+    if r in h:
+      roots=scanrefs(h[r])
+      frontier.update(roots-visited)
+    else:
+      missing.add(r)
+  print(f"Strange missing refs: {missing}")
+  return visited
+
+
+def cleanup(h:Memspace, keep:List[Ref]):
+  whitelist=closure(h, keep)
+  print(f"Closure size: {len(whitelist)}")
+  l=list(h.keys())
+  n=0
+  for k in l:
+    if not k in whitelist:
+      del h[k]
+      n+=1
+  print(f"Removed {n} of {len(l)} keys")
 
 def interp_expr(v:Val)->Tuple[Val,Memspace]:
   m=Memory({mkref('tgt'):v})
