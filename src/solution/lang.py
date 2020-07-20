@@ -269,6 +269,47 @@ def pval(v:Val)->str:
   else:
     assert False, f"{v}"
 
+def traverse(v:Val,fv:Callable[[Val],Val])->Val:
+  if v.typ==VType.Int:
+    return v
+  elif v.typ==VType.Tuple:
+    return mktuple(traverse(fv(v.val[0]),fv),traverse(fv(v.val[1]),fv))
+  elif v.typ==VType.Lam:
+    return Val(VType.Lam, Lam(v.val.pat, traverse(fv(v.val.body),fv)))
+  elif v.typ==VType.Bool:
+    return v
+  elif v.typ==VType.Err:
+    return v
+  elif v.typ==VType.Nil:
+    return v
+  elif v.typ==VType.Ap:
+    return mkap(traverse(fv(v.val.f),fv), traverse(fv(v.val.x),fv))
+  elif v.typ==VType.Ref:
+    return v
+  elif v.typ==VType.Op:
+    return v
+  else:
+    assert False, f"{v}"
+
+
+def substitute(v:Val, pats:Dict[Ref,Ref]):
+  def _fv(v:Val)->Val:
+    if v.typ==VType.Ref:
+      assert isinstance(v.val,Ref)
+      if v.val in pats:
+        return mkvref(pats[v.val])
+      else:
+        return v
+    elif v.typ==VType.Op:
+      assert isinstance(v.val,Op)
+      acc=[]
+      for b in v.val.bind:
+        acc.append(pats[b] if b in pats else b)
+      return mkop(v.val.term, acc)
+    else:
+      return v
+  return traverse(_fv(v),_fv)
+
 
 def checkerr(vals, lam)->Val:
   """ DEPRECATED"""
@@ -403,7 +444,10 @@ def unref(m:Memory, h:Memspace, r:Ref)->Val:
     if v is None:
       print(f"Can'r unref {r}")
       set_trace()
+      assert False
+    assert v is not None
     if v.typ==VType.Ref:
+      assert isinstance(v.val,Ref)
       r=v.val
     else:
       return v
@@ -452,6 +496,7 @@ def interp(m:Memory, target:Ref, h:Optional[Memspace]=None)->Tuple[Val,Memspace]
       matched:Dict[Ref,Val]=OrderedDict()
       while v.typ==VType.Ap or v.typ==VType.Ref:
         if v.typ==VType.Ref:
+          assert isinstance(v.val,Ref)
           v=_getmem(v.val)
           continue
         assert isinstance(v.val, Ap)
@@ -468,21 +513,23 @@ def interp(m:Memory, target:Ref, h:Optional[Memspace]=None)->Tuple[Val,Memspace]
         raise ValueError(f"Error! Can't apply to '{pval(v)}'")
 
       # Split current target in two
-      ref=newref('e')
-      v2=mkvref(ref)
+      # Re-queue the AP head with unmatched patterns
+      rleaf=newref('e')
+      v2=mkvref(rleaf)
       for b in reversed(branches):
         v2=mkap(v2,b)
       _addqueue(cur)
       heap[cur]=v2
 
       # Leaf `v` with matched patterns
-      _addqueue(ref)
-      heap[ref]=v
-
-      # Arguments of `v`
+      _addqueue(rleaf)
+      subst={}
       for ref,val in matched.items():
-        # _addqueue(ref)
-        heap[ref]=val
+        ref2=newref()
+        heap[ref2]=val
+        subst[ref]=ref2
+      heap[rleaf]=substitute(v,subst)
+
     elif v.typ==VType.Op:
       assert isinstance(v.val, Op)
       o:Op=v.val

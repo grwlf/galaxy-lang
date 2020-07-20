@@ -31,35 +31,6 @@ from solution.lang import *
 #   :3 = ap ap ap if0 ap ap ap isnil :1 0 1 33 ap cdr :3
 #   ''', '33')
 
-prog_test('''
-  :0 = dec
-  :1 = ap ap cons :0 ap ap cons :0 ap ap cons :0 nil
-  :2 = ap ap car :1 33
-  :3 = ap cdr :1
-  :4 = ap ap car :3 42
-  x = ap ap cons :2 ap ap cons :4 nil
-  y = ap car x
-  ''', '32')
-
-prog_test('''
-  :1 = ap ap cons 0 ap ap cons 42 nil
-  :2 = ap ap s ap ap b cons car cdr
-  :3 = ap :2 :1
-  :4 = ap car ap cdr :3
-  ''', '42')
-
-prog_test('''
-  :1 = i
-  :2 = ap :1 1
-  :3 = ap :1 10
-  :4 = ap ap add :2 :3
-  ''', '11')
-
-prog_test('''
-  :1 = inc
-  :4 = ap ap ap b :1 :1 1
-  ''', '2')
-
 run_test('add', '''
   #ap (ap ap add 1 1) 1 = 2
   ap ap ap add 1 1 1 != 2
@@ -242,6 +213,35 @@ run_test('if0', '''
   ap ap ap if0 0 33 42   =   33
   ap ap ap if0 1 33 42   =   42
   ''')
+
+prog_test('''
+  :0 = dec
+  :1 = ap ap cons :0 ap ap cons :0 ap ap cons :0 nil
+  :2 = ap ap car :1 33
+  :3 = ap cdr :1
+  :4 = ap ap car :3 42
+  x = ap ap cons :2 ap ap cons :4 nil
+  y = ap car x
+  ''', '32')
+
+prog_test('''
+  :1 = ap ap cons 0 ap ap cons 42 nil
+  :2 = ap ap s ap ap b cons car cdr
+  :3 = ap :2 :1
+  :4 = ap car ap cdr :3
+  ''', '42')
+
+prog_test('''
+  :1 = i
+  :2 = ap :1 1
+  :3 = ap :1 10
+  :4 = ap ap add :2 :3
+  ''', '11')
+
+prog_test('''
+  :1 = inc
+  :4 = ap ap ap b :1 :1 1
+  ''', '3')
 
 
 
