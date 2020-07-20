@@ -49,11 +49,6 @@ def geval(M,heap,line,hint='')->Tuple[Ref,Val]:
 #     risnil,isnil=_eval(f"ap ap ap isnil {rimg.to} 1 0", "is nil?")
 #   return acc
 
-def unpoint(M,h,rpoint)->Tuple[int,int]:
-  rx,x=geval(M,h,f"ap car {rpoint.to}", "x")
-  ry,y=geval(M,h,f"ap cdr {rpoint.to}", "y")
-  return (asint(x),asint(y))
-
 def maplist(M,h,rimg,fn)->List[Any]:
   acc=[]
   isnil=mkint(0)
@@ -66,6 +61,16 @@ def maplist(M,h,rimg,fn)->List[Any]:
     rimg,img=_eval(f"ap cdr {rimg.to}", "next point")
     risnil,isnil=_eval(f"ap ap ap isnil {rimg.to} 1 0", "is nil?")
   return acc
+
+def unpoint(M,h,rpoint)->Tuple[int,int]:
+  rx,x=geval(M,h,f"ap car {rpoint.to}", "x")
+  ry,y=geval(M,h,f"ap cdr {rpoint.to}", "y")
+  return (asint(x),asint(y))
+
+def unimg(M,heap,rimg):
+  img=maplist(M,heap,rimg,unpoint)
+  # showimg(img)
+  return img
 
 from solution.gui import showimg
 
@@ -86,14 +91,18 @@ def draw(M:Memory):
   rg3,g3=_eval(f"ap car ap cdr ap cdr {rgal.to}", 'list of list of points')
 
   r=rg3
-  while True:
-    rimg,img=_eval(f"ap car {r.to}", "list of points")
 
-    img=maplist(M,heap,rimg,unpoint)
-    return img
-    # showimg(img)
+  imgs=maplist(M,heap,r,unimg)
+  return imgs
 
-    set_trace()
+  # while True:
+  #   rimg,img=_eval(f"ap car {r.to}", "list of points")
+
+  #   img=maplist(M,heap,rimg,unpoint)
+  #   return img
+  #   # showimg(img)
+
+  #   set_trace()
 
 
 
