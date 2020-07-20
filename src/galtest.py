@@ -32,6 +32,23 @@ from solution.lang import *
 #   ''', '33')
 
 prog_test('''
+  :0 = dec
+  :1 = ap ap cons :0 ap ap cons :0 ap ap cons :0 nil
+  :2 = ap ap car :1 33
+  :3 = ap cdr :1
+  :4 = ap ap car :3 42
+  x = ap ap cons :2 ap ap cons :4 nil
+  y = ap car x
+  ''', '32')
+
+prog_test('''
+  :1 = ap ap cons 0 ap ap cons 42 nil
+  :2 = ap ap s ap ap b cons car cdr
+  :3 = ap :2 :1
+  :4 = ap car ap cdr :3
+  ''', '42')
+
+prog_test('''
   :1 = i
   :2 = ap :1 1
   :3 = ap :1 10
@@ -141,7 +158,30 @@ run_test('b', '''
 
 ## ap pwr2 0   =   ap ap ap s ap ap c ap eq 0 1 ap ap b ap mul 2 (3.1.2 . ap 3 (b 0.5 1 2))
 
+run_test('lt', '''
+  ap ap lt 0 -1   =   f
+  ap ap lt 0 0   =   f
+  ap ap lt 0 1   =   t
+  ap ap lt 0 2   =   t
 
+  ap ap lt 1 0   =   f
+  ap ap lt 1 1   =   f
+  ap ap lt 1 2   =   t
+  ap ap lt 1 3   =   t
+
+  ap ap lt 2 1   =   f
+  ap ap lt 2 2   =   f
+  ap ap lt 2 3   =   t
+  ap ap lt 2 4   =   t
+
+  ap ap lt 19 20   =   t
+  ap ap lt 20 20   =   f
+  ap ap lt 21 20   =   f
+
+  ap ap lt -19 -20   =   f
+  ap ap lt -20 -20   =   f
+  ap ap lt -21 -20   =   t
+  ''')
 
 
 ## FIXME: pwr2 requires untyped interpetation
@@ -176,7 +216,7 @@ run_test('i', '''
 
 run_test('car', '''
   ap car ap ap cons 33 42   =   33
-  ap car ap ap cons 33 42   =   33
+  ap cdr ap ap cons 33 42   =   42
   ap car i   =   ap i t
   ''')
 
@@ -231,6 +271,8 @@ modem_test(mktuple(mkint(0),mknil()))
 modem_test(mktuple(mkint(1),mktuple(mkint(2),mktuple(mkint(3),mknil()))))
 modem_test(mktuple(mkint(1),mkint(2)))
 
+
+print(pval(dem_val('1101000')[0]))
 
 # V=run_program(':33', interp_program('''
 #   :0 = cons

@@ -397,19 +397,31 @@ def isnf(v:Val)->bool:
     return False
   return True
 
+def unref(m:Memory, h:Memspace, r:Ref)->Val:
+  while True:
+    v=h.get(r, m.space.get(r,None))
+    if v is None:
+      print(f"Can'r unref {r}")
+      set_trace()
+    if v.typ==VType.Ref:
+      r=v.val
+    else:
+      return v
+
 def interp(m:Memory, target:Ref, h:Optional[Memspace]=None)->Tuple[Val,Memspace]:
   heap={} if h is None else h
   queue:List[Ref]=[]
 
   def _getmem(r:Ref)->Val:
-    while True:
-      v=heap.get(r, m.space.get(r,None))
-      if v is None:
-        set_trace()
-      if v.typ==VType.Ref:
-        r=v.val
-      else:
-        return v
+    return unref(m,heap,r)
+    # while True:
+    #   v=heap.get(r, m.space.get(r,None))
+    #   if v is None:
+    #     set_trace()
+    #   if v.typ==VType.Ref:
+    #     r=v.val
+    #   else:
+    #     return v
 
   def _addqueue(v:Ref)->None:
     nonlocal queue
@@ -508,6 +520,10 @@ def interp(m:Memory, target:Ref, h:Optional[Memspace]=None)->Tuple[Val,Memspace]
           if _nfn(r[0]) or _nfn(r[1]):
             continue
           heap[cur]=mkint(div_c0(asint(a[0]),asint(a[1])))
+        elif o.term==lt:
+          if _nfn(r[0]) or _nfn(r[1]):
+            continue
+          heap[cur]=_T if asint(a[0])<asint(a[1]) else _F
         elif o.term==eq:
           if _nfn(r[0]) or _nfn(r[1]):
             continue
@@ -516,7 +532,7 @@ def interp(m:Memory, target:Ref, h:Optional[Memspace]=None)->Tuple[Val,Memspace]
           else:
             heap[cur]=_F
         elif o.term==C:
-          heap[cur]=mkap(mkap(a[0],a[1]),a[2])
+          heap[cur]=mkap(mkap(a[0],a[2]),a[1])
         elif o.term==S:
           heap[cur]=mkap(mkap(a[0],a[2]),mkap(a[1],a[2]))
         elif o.term==B:
