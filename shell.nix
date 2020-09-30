@@ -8,7 +8,7 @@ let
   inherit (pkgs) fetchgit fetchFromGitHub;
   inherit (self) buildPythonPackage fetchPypi;
 
-  pyls = self.python-language-server.override { providers=["pycodestyle" "pyflakes"]; };
+  pyls = self.python-language-server.override { providers=["pycodestyle"]; };
   pyls-mypy = self.pyls-mypy.override { python-language-server=pyls; };
 
 
@@ -24,12 +24,14 @@ let
   be = pkgs.mkShell {
     name = "pythonshell";
     buildInputs =
+    [
+      pyls-mypy
+      pyls
+    ] ++
     ( with pkgs;
       with self;
     [
       ipython
-      pyls-mypy
-      pyls
       # yapf
       # rope
       # pylint
@@ -39,6 +41,9 @@ let
       numpy
       pandas
       parsec
+      pytest
+
+      # pytorch
     ]);
 
     shellHook = with pkgs; ''
