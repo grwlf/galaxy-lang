@@ -2,7 +2,7 @@ from typing import Union, Optional, Dict, List, Any
 from dataclasses import dataclass
 from numpy import ndarray
 from galang.types import Expr, Ident, Let, Ap
-from copy import copy
+from copy import copy, deepcopy
 
 import numpy as np
 
@@ -33,16 +33,24 @@ class LibRecord:
   func:Any
   anames:List[str]
 
-LIB = {
+
+Lib = Dict[str, LibRecord]
+
+LIB:Lib = {
+  # https://numpy.org/doc/stable/reference/generated/numpy.transpose.html#numpy.transpose
   'transpose': LibRecord(np.transpose, ['input']),
-  'concat': LibRecord(np.concat, []),
+  # https://numpy.org/doc/stable/reference/generated/numpy.concatenate.html
+  'concat': LibRecord(np.concatenate, []),
+  # https://numpy.org/doc/stable/reference/generated/numpy.split.html
   'split': LibRecord(np.split, [])
 }
 
 
 def interp(expr:Expr,
            letmem:Optional[Dict[Ident,Val]]=None,
-           appmem:Optional[Dict[Ident,Val]]=None)->Val:
+           appmem:Optional[Dict[Ident,Val]]=None,
+           lib:Lib=LIB)->Val:
+  lib=deepcopy(lib)
   lm:Dict[Ident,Val] = copy(letmem) if letmem is not None else {}
   am:Dict[Ident,Val] = copy(appmem) if appmem is not None else {}
   if isinstance(expr, Ident):
@@ -65,7 +73,5 @@ def interp(expr:Expr,
     return interp(expr.body, lm, am)
   else:
     raise ValueError(f"Invalid expression {expr}")
-
-
 
 

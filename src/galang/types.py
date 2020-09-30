@@ -1,12 +1,16 @@
 from typing import Union, Callable, List, Iterable
 from dataclasses import dataclass
 
-Expr = Union['Ident', 'Ap', 'Let']
+Expr = Union['Const', 'Ident', 'Ap', 'Let']
+
+@dataclass(frozen=True, eq=True)
+class Const:
+  val:int
 
 @dataclass(frozen=True, eq=True)
 class Ident:
   name:str
-  nargs:int
+  # nargs:int
 
 @dataclass(frozen=True)
 class Ap:
