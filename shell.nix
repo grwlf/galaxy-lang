@@ -26,7 +26,7 @@ let
     buildInputs =
     [
       pyls-mypy
-      pyls
+      # pyls
     ] ++
     ( with pkgs;
       with self;
@@ -37,11 +37,12 @@ let
       # pylint
       # pydocstyle
       # autopep8
+      # pyflakes
 
       numpy
       pandas
       parsec
-      pytest
+      pytest-mypy
 
       # pytorch
     ]);
