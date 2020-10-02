@@ -1,5 +1,5 @@
-from galang.types import (Const, Ident, Expr, Let, Ap, Callable,
-                          Iterable)
+from galang.types import (Const, Ident, Expr, Lam, Ap, Callable,
+                          Iterable, Intrin, List, Dict, Val)
 
 # from contextlib import contextmanager
 
@@ -11,24 +11,27 @@ def mkname(hint:str)->str:
   NAMEGEN += 1
   return acc
 
-def num(x:int)->Expr:
-  return Const(x)
+def nnum(x:int)->Expr:
+  return Val(Const(x))
 
-def let(name:str, val:Expr, body:Callable[[Expr], Expr])->Expr:
-  return Let(name, val, body(Ident(name)))
+def ident(x:str)->Expr:
+  return Val(Ident(x))
 
-def wlet(val:Expr, body:Callable[[Expr], Expr])->Expr:
-  return let(mkname('wlet'), val, body)
+def lam(name:str, body:Callable[[Expr], Expr])->Expr:
+  return Lam(name, body(ident(name)))
 
-# @contextmanager
-# def clet(name:str, val:Expr):
-#   body = yield Ident(name)
-#   return Let(name, val, body)
+def ap(func:Expr, arg:Expr)->Expr:
+  return Ap(func, arg)
 
-def call(func:Expr, args:Iterable[Expr])->Expr:
-  acc=func
-  for arg in args:
-    acc=Ap(acc, arg)
-  return acc
+def let(expr:Expr, body:Callable[[Expr], Expr])->Expr:
+  name = mkname('let')
+  return ap(lam(name, body), expr)
 
+# def call(name:str, args:Iterable[Expr])->Expr:
+#   acc = Ident(name)
+#   for arg in args:
+#     acc = Ap(acc, arg)
+#   return acc
 
+def intrin(name:str, args:Dict[str,Expr])->Expr:
+  return Intrin(name, args)

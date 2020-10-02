@@ -1,76 +1,63 @@
-from typing import Union, Optional, Dict, List, Any
+from typing import Union, Optional, Dict, List, Any, Callable, NamedTuple
 from dataclasses import dataclass
 from numpy import ndarray
-from galang.types import Expr, Ident, Let, Ap
 from copy import copy, deepcopy
+
+from galang.types import Expr, Ident, Ap, Val, Const, Lam, Intrin
+from galang.edsl import lam, intrin
 
 import numpy as np
 
-Val = Union['VVal', 'VLam', 'VAp']
+IExpr = Union['IVal', 'IAp', 'ILam']
 
 @dataclass(frozen=True)
-class VCallable:
+class IVal:
+  val:Union[int, str, ndarray]
+
+@dataclass(frozen=True)
+class IAp:
+  func:IExpr
+  arg:IExpr
+
+@dataclass(frozen=True)
+class ILam:
   name:str
-  args:List[str]
-
-@dataclass(frozen=True)
-class VVal:
-  val:Union[VCallable, int, str, ndarray]
-
-@dataclass(frozen=True)
-class VLam:
-  name:str
-  body:Val
-
-@dataclass(frozen=True)
-class VAp:
-  func:Val
-  arg:Val
+  body:Expr
 
 
-@dataclass(frozen=True)
-class LibRecord:
-  func:Any
-  anames:List[str]
+LibEntry = NamedTuple('LibEntry', [('name',str),
+                                   ('args',List[str]),
+                                   ('impl',Callable[[Dict[str,IExpr]],IExpr])])
 
+Lib = Dict[str,LibEntry]
 
-Lib = Dict[str, LibRecord]
+Mem = Dict[Ident,IExpr]
 
-LIB:Lib = {
-  # https://numpy.org/doc/stable/reference/generated/numpy.transpose.html#numpy.transpose
-  'transpose': LibRecord(np.transpose, ['input']),
-  # https://numpy.org/doc/stable/reference/generated/numpy.concatenate.html
-  'concat': LibRecord(np.concatenate, []),
-  # https://numpy.org/doc/stable/reference/generated/numpy.split.html
-  'split': LibRecord(np.split, [])
-}
-
-
-def interp(expr:Expr,
-           letmem:Optional[Dict[Ident,Val]]=None,
-           appmem:Optional[Dict[Ident,Val]]=None,
-           lib:Lib=LIB)->Val:
-  lib=deepcopy(lib)
-  lm:Dict[Ident,Val] = copy(letmem) if letmem is not None else {}
-  am:Dict[Ident,Val] = copy(appmem) if appmem is not None else {}
-  if isinstance(expr, Ident):
-    return lm[expr]
-  elif isinstance(expr, Ap):
-    vap = interp(expr.func, lm, am)
-    varg = interp(expr.arg, lm, am)
-    if isinstance(vap, VLam):
-      am[Ident(vap.name)] = varg
-      return interp(vap.body, lm, am)
-    elif isinstance(vap, VVal):
-      assert isinstance(vap.val, VCallable)
-      lr=LIB[vap.val.name]
-      assert len(list(am.values()))==len(lr.anames)
-      return VVal(lr.func(**am))
+def interp(expr:Expr, lib:Lib, mem:Mem)->IExpr:
+  m:Mem = copy(mem) if mem is not None else {}
+  if isinstance(expr, Val):
+    if isinstance(expr.val, Ident):
+      return m[expr.val]
+    elif isinstance(expr.val, Const):
+      return IVal(expr.val.const)
     else:
-      raise ValueError(f"Invalid callable {vap}")
-  elif isinstance(expr, Let):
-    lm[Ident(expr.name)] = expr.expr
-    return interp(expr.body, lm, am)
+      raise ValueError(f"Invalid value {expr}")
+  elif isinstance(expr, Ap):
+    func = interp(expr.func, lib, m)
+    arg = interp(expr.arg, lib, m)
+    if isinstance(func, ILam):
+      m[Ident(func.name)] = arg
+      return interp(func.body, lib, m)
+    else:
+      raise ValueError(f"Invalid callable {func}")
+  elif isinstance(expr, Lam):
+    return ILam(expr.name, expr.body)
+  elif isinstance(expr, Intrin):
+    libentry = lib[expr.name]
+    iargs = {}
+    for aname,aexpr in expr.args.items():
+      iargs.update({aname: interp(aexpr,lib,m)})
+    return libentry.impl(iargs)
   else:
     raise ValueError(f"Invalid expression {expr}")
 

@@ -1,16 +1,19 @@
-from typing import Union, Callable, List, Iterable
+from typing import Union, Callable, List, Iterable, Dict
 from dataclasses import dataclass
-
-Expr = Union['Const', 'Ident', 'Ap', 'Let']
 
 @dataclass(frozen=True, eq=True)
 class Const:
-  val:int
+  const:int
 
 @dataclass(frozen=True, eq=True)
 class Ident:
-  name:str
-  # nargs:int
+  ident:str
+
+Expr = Union['Val', 'Lam', 'Ap', 'Intrin']
+
+@dataclass(frozen=True, eq=True)
+class Val:
+  val:Union[Const, Ident]
 
 @dataclass(frozen=True)
 class Ap:
@@ -18,8 +21,11 @@ class Ap:
   arg:Expr
 
 @dataclass(frozen=True)
-class Let:
-  name:str
-  expr:Expr
-  body:Expr
+class Lam:
+  name:str # Pattern
+  body:Expr # May refer to `Ident(name)`
 
+@dataclass(frozen=True)
+class Intrin:
+  name:str
+  args:Dict[str,Expr]
