@@ -1,7 +1,7 @@
 #!/bin/sh
 
-if ! test -d "$SOLUTION_SOURCE" ; then
-  echo "SOLUTION_SOURCE is not set"
+if ! test -d "$PROJECT_SOURCE" ; then
+  echo "PROJECT_SOURCE is not set"
   exit 1
 fi
 
@@ -11,8 +11,8 @@ fi
 #   alias ipython0='ipython --profile-dir=$CWD/.ipython-profile'
 # fi
 
-mkdir $SOLUTION_SOURCE/.ipython-profile 2>/dev/null || true
-cat >$SOLUTION_SOURCE/.ipython-profile/ipython_config.py <<EOF
+mkdir $PROJECT_SOURCE/.ipython-profile 2>/dev/null || true
+cat >$PROJECT_SOURCE/.ipython-profile/ipython_config.py <<EOF
 c = get_config()
 c.InteractiveShellApp.exec_lines = []
 c.InteractiveShellApp.exec_lines.append('%load_ext autoreload')
@@ -45,4 +45,4 @@ def tweak():
 tweak()
 EOF
 
-ipython3 --profile-dir=$SOLUTION_SOURCE/.ipython-profile -i "$@"
+ipython3 --profile-dir=$PROJECT_SOURCE/.ipython-profile -i "$@"
