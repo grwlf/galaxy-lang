@@ -1,5 +1,6 @@
-
-.PHONY: typecheck tc
+.PHONY: typecheck tc test
 typecheck:
-	pytest --mypy -m mypy
+	mypy src/ tests/
 tc: typecheck
+test:
+	pytest
