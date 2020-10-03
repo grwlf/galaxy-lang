@@ -43,6 +43,7 @@ let
       pandas
       parsec
       pytest-mypy
+      ipdb
 
       pytorch
     ]);

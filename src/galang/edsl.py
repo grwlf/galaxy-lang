@@ -27,11 +27,11 @@ def let(expr:Expr, body:Callable[[Expr], Expr])->Expr:
   name = mkname('let')
   return ap(lam(name, body), expr)
 
-# def call(name:str, args:Iterable[Expr])->Expr:
-#   acc = Ident(name)
-#   for arg in args:
-#     acc = Ap(acc, arg)
-#   return acc
+def call(func:Expr, args:Iterable[Expr])->Expr:
+  acc = func
+  for arg in args:
+    acc = Ap(acc, arg)
+  return acc
 
 def intrin(name:str, args:Dict[str,Expr])->Expr:
   return Intrin(name, args)
