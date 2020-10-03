@@ -21,4 +21,3 @@ def test_wlet2()->None:
 #   e = let('x', nnum(33), lambda x: x)
 #   v = interp(e)
 #   assert v.val==33
-
