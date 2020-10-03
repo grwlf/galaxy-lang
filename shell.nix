@@ -44,7 +44,7 @@ let
       parsec
       pytest-mypy
 
-      # pytorch
+      pytorch
     ]);
 
     shellHook = with pkgs; ''
