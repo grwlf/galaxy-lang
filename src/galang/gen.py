@@ -1,6 +1,6 @@
 from galang.types import Expr, MethodName, Ident
 from galang.edsl import intrin, lam, let, ident, nnum
-from galang.interp import Lib, IExpr, LibEntry, Mem
+from galang.interp import Lib, IExpr, LibEntry, IMem
 from typing import List, Dict, Optional, Iterable, Tuple
 from collections import OrderedDict
 
@@ -73,7 +73,7 @@ def genexpr2(nargs:int,
   libws = {k:wl[1] for k,wl in wlib.items()}
 
   # Accumulator of Output values
-  valcache:Dict[Expr,List[Mem]] = \
+  valcache:Dict[Expr,List[IMem]] = \
     {ident(f"arg-{n}"):[{Ident(f"arg-{n}"):i[n]} for i in inputs] for n in range(nargs)}
 
   # TODO: Could we update this weights without evaluating expressions?

@@ -29,10 +29,10 @@ LibEntry = NamedTuple('LibEntry', [('name',MethodName),
 
 Lib = Dict[MethodName,LibEntry]
 
-Mem = Dict[Ident,IExpr]
+IMem = Dict[Ident,IExpr]
 
-def interp(expr:Expr, lib:Lib, mem:Mem)->IExpr:
-  m:Mem = copy(mem) if mem is not None else {}
+def interp(expr:Expr, lib:Lib, mem:IMem)->IExpr:
+  m:IMem = copy(mem) if mem is not None else {}
   if isinstance(expr, Val):
     if isinstance(expr.val, Ident):
       return m[expr.val]
