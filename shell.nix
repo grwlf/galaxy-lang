@@ -44,6 +44,7 @@ let
       parsec
       pytest-mypy
       ipdb
+      hypothesis
 
       pytorch
     ]);

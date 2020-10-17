@@ -1,7 +1,13 @@
 from galang.interp import interp, IVal
 from galang.edsl import let, nnum, intrin, call
 from galang.domain.arith import lib
-from galang.gen import genexpr
+from galang.gen import genexpr, permute
+
+from hypothesis import given, assume, example, note, settings, event, HealthCheck
+from hypothesis.strategies import (text, decimals, integers, characters,
+                                   from_regex, dictionaries, one_of, lists,
+                                   recursive, none, booleans, floats, composite,
+                                   binary, just)
 
 def test_let()->None:
   e = let(nnum(33), lambda x: x)
@@ -23,3 +29,14 @@ def test_genexpr()->None:
   v = interp(call(e, [nnum(x) for x in [1,2,3]]), lib, {})
   assert isinstance(v, IVal), f"{v}"
   assert v.val==0
+
+@given(ws=lists(integers(1,100),max_size=5),
+       n=integers(0,4),
+       W=integers(0,100))
+def test_permute(ws,n,W)->None:
+  ans = permute(ws, n, W)
+  for a in ans:
+    assert len(a)==n
+    assert sum([ws[i] for i in a])==W
+
+

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from numpy import ndarray
 from copy import copy, deepcopy
 
-from galang.types import Expr, Ident, Ap, Val, Const, Lam, Intrin
+from galang.types import (Expr, Ident, Ap, Val, Const, Lam, Intrin)
 
 import numpy as np
 
