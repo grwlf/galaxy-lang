@@ -1,4 +1,4 @@
-from galang.interp import Lib, LibEntry, IVal, MethodName
+from galang.interp import Lib, LibEntry, IVal, MethodName, TMap
 
 
 def _add(a,b):
@@ -21,9 +21,9 @@ def unpack(f):
 def mn(n:str)->MethodName:
   return MethodName(n)
 
-lib:Lib = {
+lib:Lib = TMap({
   mn('add'): LibEntry(mn('add'), ['a','b'], unpack(_add)),
   mn('mul'): LibEntry(mn('mul'), ['a','b'], unpack(_mul)),
   mn('div'): LibEntry(mn('div'), ['a','b'], unpack(_div)),
   mn('neg'): LibEntry(mn('neg'), ['a'], unpack(_neg))
-}
+})

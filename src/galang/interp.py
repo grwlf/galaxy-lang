@@ -2,8 +2,9 @@ from typing import Union, Optional, Dict, List, Any, Callable, NamedTuple
 from dataclasses import dataclass
 from numpy import ndarray
 from copy import copy, deepcopy
+from galang.types import (Expr, Ident, Ap, Val, Const, Lam, Intrin, MethodName,
+                          TMap)
 
-from galang.types import (Expr, Ident, Ap, Val, Const, Lam, Intrin, MethodName)
 
 import numpy as np
 
@@ -27,9 +28,9 @@ LibEntry = NamedTuple('LibEntry', [('name',MethodName),
                                    ('argnames',List[str]),
                                    ('impl',Callable[[Dict[str,IExpr]],IExpr])])
 
-Lib = Dict[MethodName,LibEntry]
+Lib = TMap[MethodName,LibEntry]
 
-IMem = Dict[Ident,IExpr]
+IMem = TMap[Ident,IExpr]
 
 def interp(expr:Expr, lib:Lib, mem:IMem)->IExpr:
   m:IMem = copy(mem) if mem is not None else {}
@@ -44,8 +45,7 @@ def interp(expr:Expr, lib:Lib, mem:IMem)->IExpr:
     func = interp(expr.func, lib, m)
     arg = interp(expr.arg, lib, m)
     if isinstance(func, ILam):
-      m[Ident(func.name)] = arg
-      return interp(func.body, lib, m)
+      return interp(func.body, lib, m.set(Ident(func.name),arg))
     else:
       raise ValueError(f"Invalid callable {func}")
   elif isinstance(expr, Lam):

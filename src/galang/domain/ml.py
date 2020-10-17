@@ -1,4 +1,4 @@
-from galang.interp import Lib, LibEntry, IVal, MethodName
+from galang.interp import Lib, LibEntry, IVal, MethodName, TMap
 
 # mem:Mem = {
 #   # https://numpy.org/doc/stable/reference/generated/numpy.transpose.html#numpy.transpose
@@ -26,8 +26,8 @@ def _split(args):
 def mn(n:str)->MethodName:
   return MethodName(n)
 
-lib:Lib = {
+lib:Lib = TMap({
   mn('transpose'): LibEntry(mn('transpose'), ['a'], _transpose),
   mn('concat'): LibEntry(mn('concat'), ['a','b'], _concat),
   mn('split'): LibEntry(mn('split'), ['a'], _split)
-}
+})

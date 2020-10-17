@@ -2,7 +2,7 @@ from galang.interp import interp, IVal
 from galang.edsl import let, nnum, intrin, call
 from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, genexpr2, permute, WLib, mkwlib
-from galang.types import MethodName
+from galang.types import MethodName, TMap, Dict, mkmap
 
 from hypothesis import given, assume, example, note, settings, event, HealthCheck
 from hypothesis.strategies import (text, decimals, integers, characters,
@@ -14,7 +14,7 @@ from ipdb import set_trace
 
 def test_let()->None:
   e = let(nnum(33), lambda x: x)
-  v = interp(e, lib_arith, {})
+  v = interp(e, lib_arith, mkmap())
   assert isinstance(v, IVal)
   assert v.val==33
 
@@ -23,13 +23,13 @@ def test_wlet2()->None:
       let(nnum(42), lambda b:
           intrin(MethodName("add"), {'a':a,'b':b})))
 
-  v = interp(e, lib_arith, {})
+  v = interp(e, lib_arith, mkmap())
   assert isinstance(v, IVal)
   assert v.val==33+42
 
 def test_genexpr()->None:
   e = genexpr(3)
-  v = interp(call(e, [nnum(x) for x in [1,2,3]]), lib_arith, {})
+  v = interp(call(e, [nnum(x) for x in [1,2,3]]), lib_arith, mkmap())
   assert isinstance(v, IVal), f"{v}"
   assert v.val==0
 
@@ -41,6 +41,16 @@ def test_permute(ws,n,W)->None:
   for a in ans:
     assert len(a)==n
     assert sum([ws[i] for i in a])==W
+
+def test_tmap()->None:
+  x:TMap[int,str]=TMap({3:'3',4:'4'})
+  def _f(a:str)->str:
+    return a
+  assert _f(x[3])=='3'
+  cache:Dict[TMap[int,str],bool]={}
+  cache[x] = True # Check hashability
+  assert cache[x] == True
+
 
 """
 def test_genexpr2()->None:

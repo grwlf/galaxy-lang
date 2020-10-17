@@ -73,8 +73,8 @@ def genexpr2(nargs:int,
   libws = {k:wl[1] for k,wl in wlib.items()}
 
   # Accumulator of Output values
-  valcache:Dict[Expr,List[IMem]] = \
-    {ident(f"arg-{n}"):[{Ident(f"arg-{n}"):i[n]} for i in inputs] for n in range(nargs)}
+  # valcache:Dict[Expr,List[IMem]] = \
+  #   {ident(f"arg-{n}"):[{Ident(f"arg-{n}"):i[n]} for i in inputs] for n in range(nargs)}
 
   # TODO: Could we update this weights without evaluating expressions?
   exprcache:Dict[Expr,int] = \
