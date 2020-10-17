@@ -39,7 +39,9 @@ M = TypeVar('M')
 I = TypeVar('I')
 
 class TMap(Generic[M,I]):
-  """ Wrapper of `immutables.Map` with better type information. """
+  """ Wrapper of `immutables.Map` with simpler type information. `immutables`
+  seems to provide their own typeing, but we want to stay compatible with older
+  versions of mypy. """
   def __init__(self, *args, **kwargs)->None:
     self.map = Map(*args, **kwargs)
   def __getitem__(self, key:M)->I:
@@ -49,7 +51,7 @@ class TMap(Generic[M,I]):
   def get(self, key:M, default:Optional[I]=None)->I:
     return self.map.get(key,default)
   def set(self, key:M, val:I)->'TMap[M,I]':
-    return self.map.set(key,val)
+    return TMap(self.map.set(key,val))
   def items(self)->Iterable[Tuple[M,I]]:
     return self.map.items()
 

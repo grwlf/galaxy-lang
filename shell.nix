@@ -54,6 +54,7 @@ let
       if test -f ./env.sh ; then
         . ./env.sh
       fi
+      # export MYPYPATH=${self.immutables}/lib/python3.7/site-packages:`pwd`/src:`pwd`/tests
     '';
   };
 
