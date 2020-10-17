@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from numpy import ndarray
 from copy import copy, deepcopy
 
-from galang.types import (Expr, Ident, Ap, Val, Const, Lam, Intrin)
+from galang.types import (Expr, Ident, Ap, Val, Const, Lam, Intrin, MethodName)
 
 import numpy as np
 
@@ -23,12 +23,11 @@ class ILam:
   name:str
   body:Expr
 
-
-LibEntry = NamedTuple('LibEntry', [('name',str),
-                                   ('args',List[str]),
+LibEntry = NamedTuple('LibEntry', [('name',MethodName),
+                                   ('argnames',List[str]),
                                    ('impl',Callable[[Dict[str,IExpr]],IExpr])])
 
-Lib = Dict[str,LibEntry]
+Lib = Dict[MethodName,LibEntry]
 
 Mem = Dict[Ident,IExpr]
 

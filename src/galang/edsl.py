@@ -1,5 +1,5 @@
 from galang.types import (Const, Ident, Expr, Lam, Ap, Callable,
-                          Iterable, Intrin, List, Dict, Val)
+                          Iterable, Intrin, List, Dict, Val, MethodName, Map)
 
 # from contextlib import contextmanager
 
@@ -33,6 +33,6 @@ def call(func:Expr, args:Iterable[Expr])->Expr:
     acc = Ap(acc, arg)
   return acc
 
-def intrin(name:str, args:Dict[str,Expr])->Expr:
-  return Intrin(name, args)
+def intrin(name:MethodName, args:Dict[str,Expr])->Expr:
+  return Intrin(name, Map(args.items()))
 

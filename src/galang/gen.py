@@ -1,8 +1,10 @@
-from galang.types import Expr
+from galang.types import Expr, MethodName, Ident
 from galang.edsl import intrin, lam, let, ident, nnum
-from galang.interp import Lib, IExpr
-from typing import List, Dict, Optional, Iterable
+from galang.interp import Lib, IExpr, LibEntry, Mem
+from typing import List, Dict, Optional, Iterable, Tuple
 from collections import OrderedDict
+
+from ipdb import set_trace
 
 def genexpr(nargs:int)->Expr:
   """ Generate lambda-expression with `nargs` arguments """
@@ -50,33 +52,49 @@ def permute(ws:List[int], n:int, W:int)->List[List[int]]:
     return acc
   return [a for a in _go(W) if len(a)==n]
 
+WLib = Dict[MethodName, Tuple[LibEntry,int]]
 
-def genexpr2(nargs:int, lib:Lib,
-             opweights:Dict[str,int])->List[Expr]:
-  """ Generate lambda-expression with `nargs` arguments """
+def mkwlib(lib:Lib, default:int, weights:Optional[Dict[MethodName,int]]=None)->WLib:
+  """ Define weights for the entries of a library """
+  weights_ = weights if weights is not None else {}
+  return {k:(e,weights_.get(k,default)) for k,e in lib.items()}
 
-  # Output values accumulator
-  vals:Dict[Expr,Optional[IExpr]] = {ident(f"arg-{i}"):None for i in range(nargs)}
+
+def genexpr2(nargs:int,
+             wlib:WLib,
+             inputs:List[List[IExpr]])->Iterable[Tuple[Expr,int]]:
+  """ Generate lambda-expression with `nargs` arguments
+  FIXME: broken!
+  """
+  assert all([len(i)==nargs for i in inputs]), \
+    f"All inputs should contain exactly `nargs` arguments ({nargs})." \
+    f"The following inputs are invalid: {[i for i in inputs if len(i)!=nargs]}"
+  lib = {k:wl[0] for k,wl in wlib.items()}
+  libws = {k:wl[1] for k,wl in wlib.items()}
+
+  # Accumulator of Output values
+  valcache:Dict[Expr,List[Mem]] = \
+    {ident(f"arg-{n}"):[{Ident(f"arg-{n}"):i[n]} for i in inputs] for n in range(nargs)}
 
   # TODO: Could we update this weights without evaluating expressions?
-  valweights:Dict[Expr,int] = OrderedDict()
-
-  # TODO: populate vals with deduced constants
+  exprcache:Dict[Expr,int] = \
+    OrderedDict({ident(f"arg-{i}"):1 for i in range(nargs)})
 
   W = 0
   while True:
     W += 1
     for op in lib.values():
-      n = len(op.args)
-      w = opweights[op.name]
-      nargs = len(op.args)
-      argws = list(valweights.items())
-      for indiset in permute([a[1] for a in argws], nargs, W-w):
-        # op1 = intrin(op.name, {'a':None, 'b':None})
-        args:List[Expr] = [argws[i][0] for i in indiset]
+      n = len(op.argnames)
+      w = libws[op.name]
+      nargs = len(op.argnames)
+      vws = list(exprcache.items()) # Value Weights
+      for valindices in permute([a[1] for a in vws], nargs, W-w):
+        args:List[Expr] = [vws[i][0] for i in valindices]
+        assert len(op.argnames)==len(args)
+        # set_trace()
+        e = intrin(op.name, {a:v for a,v in zip(op.argnames, args)})
+        # valcache[e] = []
+        exprcache[e] = W
+        yield (e,W)
 
-
-
-  assert False, "Not done yet"
-  return None
 

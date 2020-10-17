@@ -1,5 +1,7 @@
-from typing import Union, Callable, List, Iterable, Dict
+from typing import (Union, Callable, List, Iterable, Dict, NamedTuple, Set,
+                    Tuple, FrozenSet)
 from dataclasses import dataclass
+from immutables import Map
 
 @dataclass(frozen=True, eq=True)
 class Const:
@@ -25,7 +27,9 @@ class Lam:
   name:str # Pattern
   body:Expr # May refer to `Ident(name)`
 
+MethodName = NamedTuple('MethodName', [('val',str)])
+
 @dataclass(frozen=True)
 class Intrin:
-  name:str
-  args:Dict[str,Expr]
+  name:MethodName
+  args:Map[str,Expr]

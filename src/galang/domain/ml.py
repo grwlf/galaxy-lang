@@ -1,4 +1,4 @@
-from galang.interp import Lib, LibEntry, IVal
+from galang.interp import Lib, LibEntry, IVal, MethodName
 
 # mem:Mem = {
 #   # https://numpy.org/doc/stable/reference/generated/numpy.transpose.html#numpy.transpose
@@ -23,8 +23,11 @@ def _concat(args):
 def _split(args):
   pass
 
+def mn(n:str)->MethodName:
+  return MethodName(n)
+
 lib:Lib = {
-  'transpose': LibEntry('transpose', ['a'], _transpose),
-  'concat': LibEntry('concat', ['a','b'], _concat),
-  'split': LibEntry('split', ['a'], _split)
+  mn('transpose'): LibEntry(mn('transpose'), ['a'], _transpose),
+  mn('concat'): LibEntry(mn('concat'), ['a','b'], _concat),
+  mn('split'): LibEntry(mn('split'), ['a'], _split)
 }

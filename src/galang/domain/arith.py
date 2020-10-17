@@ -1,4 +1,4 @@
-from galang.interp import Lib, LibEntry, IVal
+from galang.interp import Lib, LibEntry, IVal, MethodName
 
 
 def _add(a,b):
@@ -18,9 +18,12 @@ def unpack(f):
     return IVal(f(**{an:a.val for an,a in args.items()}))
   return _f
 
+def mn(n:str)->MethodName:
+  return MethodName(n)
+
 lib:Lib = {
-  'add': LibEntry('add', ['a','b'], unpack(_add)),
-  'mul': LibEntry('mul', ['a','b'], unpack(_mul)),
-  'div': LibEntry('div', ['a','b'], unpack(_div)),
-  'neg': LibEntry('neg', ['a'], unpack(_neg))
+  mn('add'): LibEntry(mn('add'), ['a','b'], unpack(_add)),
+  mn('mul'): LibEntry(mn('mul'), ['a','b'], unpack(_mul)),
+  mn('div'): LibEntry(mn('div'), ['a','b'], unpack(_div)),
+  mn('neg'): LibEntry(mn('neg'), ['a'], unpack(_neg))
 }

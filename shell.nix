@@ -45,6 +45,7 @@ let
       pytest-mypy
       ipdb
       hypothesis
+      immutables
 
       pytorch
     ]);
