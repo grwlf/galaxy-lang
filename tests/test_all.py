@@ -14,7 +14,7 @@ from ipdb import set_trace
 
 def test_let()->None:
   e = let(nnum(33), lambda x: x)
-  v = interp(e, lib_arith, mkmap())
+  v,_ = interp(e, lib_arith, mkmap())
   assert isinstance(v, IVal)
   assert v.val==33
 
@@ -23,13 +23,13 @@ def test_wlet2()->None:
       let(nnum(42), lambda b:
           intrin(MethodName("add"), {'a':a,'b':b})))
 
-  v = interp(e, lib_arith, mkmap())
+  v,_ = interp(e, lib_arith, mkmap())
   assert isinstance(v, IVal)
   assert v.val==33+42
 
 def test_genexpr()->None:
   e = genexpr(3)
-  v = interp(call(e, [nnum(x) for x in [1,2,3]]), lib_arith, mkmap())
+  v,_ = interp(call(e, [nnum(x) for x in [1,2,3]]), lib_arith, mkmap())
   assert isinstance(v, IVal), f"{v}"
   assert v.val==0
 

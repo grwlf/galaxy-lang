@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from numpy import ndarray
 from copy import copy, deepcopy
 from galang.types import (Expr, Ident, Ap, Val, Const, Lam, Intrin, MethodName,
-                          TMap)
+                          TMap, Tuple)
 
 
 import numpy as np
@@ -32,30 +32,30 @@ Lib = TMap[MethodName,LibEntry]
 
 IMem = TMap[Ident,IExpr]
 
-def interp(expr:Expr, lib:Lib, mem:IMem)->IExpr:
-  m:IMem = copy(mem) if mem is not None else {}
+def interp(expr:Expr, lib:Lib, m:IMem)->Tuple[IExpr,IMem]:
   if isinstance(expr, Val):
     if isinstance(expr.val, Ident):
-      return m[expr.val]
+      return (m[expr.val],m)
     elif isinstance(expr.val, Const):
-      return IVal(expr.val.const)
+      return (IVal(expr.val.const), m)
     else:
       raise ValueError(f"Invalid value {expr}")
   elif isinstance(expr, Ap):
-    func = interp(expr.func, lib, m)
-    arg = interp(expr.arg, lib, m)
+    func,m2 = interp(expr.func, lib, m)
+    arg,m3 = interp(expr.arg, lib, m2)
     if isinstance(func, ILam):
-      return interp(func.body, lib, m.set(Ident(func.name),arg))
+      return interp(func.body, lib, m3.set(Ident(func.name),arg))
     else:
       raise ValueError(f"Invalid callable {func}")
   elif isinstance(expr, Lam):
-    return ILam(expr.name, expr.body)
+    return (ILam(expr.name, expr.body),m)
   elif isinstance(expr, Intrin):
     libentry = lib[expr.name]
     iargs = {}
     for aname,aexpr in expr.args.items():
-      iargs.update({aname: interp(aexpr,lib,m)})
-    return libentry.impl(iargs)
+      a,_ = interp(aexpr, lib, m)
+      iargs.update({aname: a})
+    return (libentry.impl(iargs), m)
   else:
     raise ValueError(f"Invalid expression {expr}")
 

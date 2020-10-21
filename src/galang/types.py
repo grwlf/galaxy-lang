@@ -1,5 +1,5 @@
 from typing import (Union, Callable, List, Iterable, Dict, NamedTuple, Set,
-                    Tuple, FrozenSet, TypeVar, Generic, Optional)
+                    Tuple, FrozenSet, TypeVar, Generic, Optional, Tuple)
 from dataclasses import dataclass
 from immutables import Map
 
