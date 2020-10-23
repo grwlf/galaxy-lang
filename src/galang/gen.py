@@ -1,4 +1,4 @@
-from galang.types import Expr, MethodName, Ident
+from galang.types import Expr, MethodName, Ident, Mem
 from galang.edsl import intrin, lam, let, ident, nnum
 from galang.interp import Lib, IExpr, LibEntry, IMem
 from typing import List, Dict, Optional, Iterable, Tuple
@@ -75,6 +75,11 @@ def genexpr2(nargs:int,
   # Accumulator of Output values
   # valcache:Dict[Expr,List[IMem]] = \
   #   {ident(f"arg-{n}"):[{Ident(f"arg-{n}"):i[n]} for i in inputs] for n in range(nargs)}
+  #
+  # Should be:
+  # valcache:Dict[Mem,List[IMem]] = ...
+  #
+  # Hint: Expressions depend on weights only via filters
 
   # TODO: Could we update this weights without evaluating expressions?
   exprcache:Dict[Expr,int] = \
