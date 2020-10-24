@@ -1,8 +1,9 @@
 from galang.interp import interp, IVal
-from galang.edsl import let, nnum, intrin, call
+from galang.edsl import let_, let, num, intrin, call
 from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, genexpr2, permute, WLib, mkwlib
-from galang.types import MethodName, TMap, Dict, mkmap
+from galang.types import MethodName, TMap, Dict, mkmap, Ident
+from galang.utils import idents
 
 from hypothesis import given, assume, example, note, settings, event, HealthCheck
 from hypothesis.strategies import (text, decimals, integers, characters,
@@ -13,14 +14,14 @@ from hypothesis.strategies import (text, decimals, integers, characters,
 from ipdb import set_trace
 
 def test_let()->None:
-  e = let(nnum(33), lambda x: x)
+  e = let(num(33), lambda x: x)
   v,_ = interp(e, lib_arith, mkmap())
   assert isinstance(v, IVal)
   assert v.val==33
 
 def test_wlet2()->None:
-  e = let(nnum(33), lambda a:
-      let(nnum(42), lambda b:
+  e = let(num(33), lambda a:
+      let(num(42), lambda b:
           intrin(MethodName("add"), {'a':a,'b':b})))
 
   v,_ = interp(e, lib_arith, mkmap())
@@ -29,7 +30,7 @@ def test_wlet2()->None:
 
 def test_genexpr()->None:
   e = genexpr(3)
-  v,_ = interp(call(e, [nnum(x) for x in [1,2,3]]), lib_arith, mkmap())
+  v,_ = interp(call(e, [num(x) for x in [1,2,3]]), lib_arith, mkmap())
   assert isinstance(v, IVal), f"{v}"
   assert v.val==0
 
@@ -50,6 +51,12 @@ def test_tmap()->None:
   cache:Dict[TMap[int,str],bool]={}
   cache[x] = True # Check hashability
   assert cache[x] == True
+
+def test_idents()->None:
+  e = let_('a', num(33), lambda a:
+      let_('b', num(42), lambda b:
+          intrin(MethodName("add"), {'a':a,'b':b})))
+  assert idents(e)==set([Ident('a'),Ident('b')])
 
 
 """

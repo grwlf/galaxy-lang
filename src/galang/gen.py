@@ -1,6 +1,6 @@
-from galang.types import Expr, MethodName, Ident, Mem
-from galang.edsl import intrin, lam, let, ident, nnum
-from galang.interp import Lib, IExpr, LibEntry, IMem
+from galang.types import Expr, MethodName, Ident, Mem, Val, TMap
+from galang.edsl import intrin, lam, let, ident, num, mkname
+from galang.interp import Lib, IExpr, LibEntry, IMem, IVal, interp
 from typing import List, Dict, Optional, Iterable, Tuple
 from collections import OrderedDict
 
@@ -10,7 +10,7 @@ def genexpr(nargs:int)->Expr:
   """ Generate lambda-expression with `nargs` arguments """
 
   def _genbody(avail:List[Expr]):
-    return nnum(0)
+    return num(0)
 
   def _genlam(avail:List[Expr])->Expr:
     def _f(x):
@@ -32,9 +32,12 @@ def genexpr(nargs:int)->Expr:
 #   return []
 
 
-def permute(ws:List[int], n:int, W:int)->List[List[int]]:
+def permute(weights:List[int], nargs:int, target_weight:int)->List[List[int]]:
   """ Return all combinations of indeces of `ws` of length `n` which sum up to
   `W` """
+  ws = weights
+  n = nargs
+  W = target_weight
   cache:Dict[int,List[List[int]]]={}
   def _go(W)->List[List[int]]:
     nonlocal cache
@@ -59,18 +62,17 @@ def mkwlib(lib:Lib, default:int, weights:Optional[Dict[MethodName,int]]=None)->W
   weights_ = weights if weights is not None else {}
   return {k:(e,weights_.get(k,default)) for k,e in lib.items()}
 
+# def assemble(e:Expr, mem:Mem)->Expr:
+#   for 
 
-def genexpr2(nargs:int,
-             wlib:WLib,
-             inputs:List[List[IExpr]])->Iterable[Tuple[Expr,int]]:
-  """ Generate lambda-expression with `nargs` arguments
+def genexpr2(wlib:WLib,
+             inputs:List[List[IVal]])->Iterable[Tuple[Expr,List[IExpr],int]]:
+  """ Generate lambda-expression with `len(inputs)` arguments
   FIXME: broken!
   """
-  assert all([len(i)==nargs for i in inputs]), \
-    f"All inputs should contain exactly `nargs` arguments ({nargs})." \
-    f"The following inputs are invalid: {[i for i in inputs if len(i)!=nargs]}"
-  lib = {k:wl[0] for k,wl in wlib.items()}
-  libws = {k:wl[1] for k,wl in wlib.items()}
+  # assert all([len(i)==nargs for i in inputs]), \
+  #   f"All inputs should contain exactly `nargs` arguments ({nargs})." \
+  #   f"The following inputs are invalid: {[i for i in inputs if len(i)!=nargs]}"
 
   # Accumulator of Output values
   # valcache:Dict[Expr,List[IMem]] = \
@@ -80,10 +82,38 @@ def genexpr2(nargs:int,
   # valcache:Dict[Mem,List[IMem]] = ...
   #
   # Hint: Expressions depend on weights only via filters
-
+  #
+  # Algorithm inputs:
+  # ----------------
+  # wlib:WLib
+  # inputs:List[List[IVal]]
+  #
+  # Algorithm state:
+  # ---------------
+  # exprw:Dict[Ident,int] = {}
+  # exprcache:Dict[Ident,Intrin] = {}
+  # valcache:Dict[Ident,List[IExpr]] = {}
+  #
+  # Algorithm outputs:
+  # -----------------
+  # Expressions accumulated from exprcache, its weight and List[IVal]
+  #
   # TODO: Could we update this weights without evaluating expressions?
-  exprcache:Dict[Expr,int] = \
-    OrderedDict({ident(f"arg-{i}"):1 for i in range(nargs)})
+
+  # All inputs should be of the same size
+  assert all([len(inputs[i])==len(inputs[0]) for i in range(len(inputs))])
+  nbatch = len(inputs[0]) if len(inputs)>0 else 1
+
+  lib = {k:wl[0] for k,wl in wlib.items()}
+  libws = {k:wl[1] for k,wl in wlib.items()}
+
+  exprw:Dict[Ident,int]={Ident(f"input{i}"):1 \
+                         for i in range(len(inputs))}
+  exprcache:Dict[Ident,Expr]={Ident(f"input{i}"):ident("input{i}") \
+                              for i in range(len(inputs))}
+  valcache:Dict[Ident,List[IExpr]]={Ident(f"input{i}"):[iv for iv in inputs[i]] \
+                                    for i in range(len(inputs))}
+
 
   W = 0
   while True:
@@ -92,14 +122,19 @@ def genexpr2(nargs:int,
       n = len(op.argnames)
       w = libws[op.name]
       nargs = len(op.argnames)
-      vws = list(exprcache.items()) # Value Weights
-      for valindices in permute([a[1] for a in vws], nargs, W-w):
-        args:List[Expr] = [vws[i][0] for i in valindices]
-        assert len(op.argnames)==len(args)
-        # set_trace()
-        e = intrin(op.name, {a:v for a,v in zip(op.argnames, args)})
-        # valcache[e] = []
-        exprcache[e] = W
-        yield (e,W)
+      vws:List[Tuple[Ident,int]] = list(exprw.items())
+      for valindices in permute(weights=[a[1] for a in vws], nargs=nargs, target_weight=W-w):
+        argexprs:List[Ident] = [vws[i][0] for i in valindices]
+        assert len(op.argnames)==len(argexprs)
+        acc:List[IExpr] = []
+        e2name = Ident(mkname('val'))
+        e2expr = intrin(op.name, {nm:Val(ai) for nm,ai in zip(op.argnames, argexprs)})
+        for b in range(nbatch):
+          e2val,_ = interp(e2expr, TMap(lib), TMap({nm:valcache[nm][b] for nm in argexprs}))
+          acc.append(e2val)
 
+        valcache[e2name] = acc
+        exprcache[e2name] = e2expr
+        exprw[e2name] = W
+        yield (e2expr,acc,W)
 

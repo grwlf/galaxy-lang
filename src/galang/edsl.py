@@ -11,7 +11,7 @@ def mkname(hint:str)->str:
   NAMEGEN += 1
   return acc
 
-def nnum(x:int)->Expr:
+def num(x:int)->Expr:
   return Val(Const(x))
 
 def ident(x:str)->Expr:
@@ -23,9 +23,12 @@ def lam(name:str, body:Callable[[Expr], Expr])->Expr:
 def ap(func:Expr, arg:Expr)->Expr:
   return Ap(func, arg)
 
+def let_(name, expr:Expr, body:Callable[[Expr], Expr])->Expr:
+  return ap(lam(name, body), expr)
+
 def let(expr:Expr, body:Callable[[Expr], Expr])->Expr:
   name = mkname('let')
-  return ap(lam(name, body), expr)
+  return let_(name, expr, body)
 
 def call(func:Expr, args:Iterable[Expr])->Expr:
   acc = func
