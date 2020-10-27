@@ -21,3 +21,93 @@ def idents(e:Expr)->Set[Ident]:
     return acc
   else:
     raise ValueError(f"Invalid expression {e}")
+
+
+def dmerge(dicts:List[Dict[Any,Any]], ctr=int, agg=lambda a,b:a+b)->Dict[Any,Any]:
+  acc:Dict[Any,Any] = defaultdict(ctr)
+  for k,v in chain(*[d.items() for d in dicts]):
+    acc[k] = agg(acc[k], v)
+  return dict(acc)
+
+def defs(e:Expr)->Dict[VRef,Expr]:
+  if isinstance(e,Val):
+    return {}
+  elif isinstance(e,Let):
+    return dmerge([{e.vref:e.expr},defs(e.body)], lambda: None, lambda a,b:b)
+  elif isinstance(e,Intrin):
+    return dmerge([defs(arg) for arg in e.args], lambda: None, lambda a,b:b)
+  else:
+    raise ValueError(f"Invalid expression {e}")
+
+def nentries(e:Expr)->Dict[VRef,int]:
+  if isinstance(e,Val):
+    if isinstance(e.val, VRef):
+      return {e.val:1}
+    return {}
+  elif isinstance(e,Let):
+    return dmerge([nentries(e.expr),nentries(e.body)])
+  elif isinstance(e,Intrin):
+    return dmerge([nentries(arg) for arg in e.args])
+  else:
+    raise ValueError(f"Invalid expression {e}")
+
+def subst(e:Expr, substs:Dict[VRef,Expr])->Expr:
+  if isinstance(e,Val):
+    if isinstance(e.val, VRef):
+      if e.val in substs:
+        return substs[e.val]
+      else:
+        return e
+    else:
+      return e
+  elif isinstance(e,Let):
+    if e.vref in substs:
+      return subst(e.body, {vref:(subst(expr, {e.vref:substs[e.vref]})
+                                  if vref!=e.vref else substs[e.vref])
+                            for vref,expr in substs.items()})
+    else:
+      return Let(e.vref,
+                 subst(e.expr, substs),
+                 subst(e.body, substs))
+  elif isinstance(e,Intrin):
+    return Intrin(e.name, [subst(a,substs) for a in e.args])
+  else:
+    raise ValueError(f"Invalid expression {e}")
+
+def simplify(e:Expr)->Expr:
+  i = 0
+  while True:
+    l = defs(e)
+    n = nentries(e)
+    if all([x>1 for x in n.values()]):
+      break
+    substs = {vref:expr for vref,expr in l.items() if vref in n and n[vref]==1}
+    if i>5:
+      assert False
+    # print(i)
+    # print(print_expr(e))
+    # print('defs:', l)
+    # print('nums:', n)
+    # print('substs:', substs)
+    e = subst(e,substs)
+    i+=1
+  return e
+
+
+
+def print_expr(e:Expr)->str:
+  if isinstance(e,Val):
+    if isinstance(e.val, VRef):
+      return f"v{e.val.ident}"
+    elif isinstance(e.val, ARef):
+      return f"a{e.val.ident}"
+    elif isinstance(e.val, Const):
+      return f"{e.val.const}"
+    else:
+      raise ValueError(f"Invalid value-expr {e}")
+  elif isinstance(e,Let):
+    return f"let v{e.vref.ident} = {print_expr(e.expr)} in {print_expr(e.body)}"
+  elif isinstance(e,Intrin):
+    return f"{e.name.val}({','.join([print_expr(a) for a in e.args])})"
+  else:
+    raise ValueError(f"Invalid expression {e}")
