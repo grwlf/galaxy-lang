@@ -1,7 +1,8 @@
-from galang.types import Expr, MethodName, Ref, Mem, Val, TMap
-from galang.edsl import intrin, lam, let, ref, num, mkname
+from galang.types import Expr, MethodName, Ref, Mem, Val, TMap, Ref
+from galang.edsl import intrin, lam, let, ref, num, mkname, let_
 from galang.interp import Lib, IExpr, LibEntry, IMem, IVal, interp
-from typing import List, Dict, Optional, Iterable, Tuple
+from galang.utils import refs
+from typing import List, Dict, Optional, Iterable, Tuple, Set
 from collections import OrderedDict
 
 from ipdb import set_trace
@@ -62,8 +63,20 @@ def mkwlib(lib:Lib, default:int, weights:Optional[Dict[MethodName,int]]=None)->W
   weights_ = weights if weights is not None else {}
   return {k:(e,weights_.get(k,default)) for k,e in lib.items()}
 
-# def assemble(e:Expr, mem:Mem)->Expr:
-#   for 
+def assemble(top:Ref, mem:Mem)->Expr:
+  """ FIXME: has a bug, doesn't work """
+  visited:Set[Ref] = set()
+  frontier:Set[Ref] = set([top])
+  acc:Expr = mem[top]
+  while frontier:
+    i = frontier.pop()
+    expr = mem[i]
+    acc = let_(i.name, expr, lambda _: acc)
+    visited.add(i)
+    frontier |= refs(expr) - visited
+  return acc
+
+
 
 def genexpr2(wlib:WLib,
              inputs:List[List[IVal]])->Iterable[Tuple[Expr,List[IExpr],int]]:
@@ -113,7 +126,6 @@ def genexpr2(wlib:WLib,
                               for i in range(len(inputs))}
   valcache:Dict[Ref,List[IExpr]]={Ref(f"input{i}"):[iv for iv in inputs[i]] \
                                     for i in range(len(inputs))}
-
 
   W = 0
   while True:

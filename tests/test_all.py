@@ -1,8 +1,8 @@
 from galang.interp import interp, IVal
 from galang.edsl import let_, let, num, intrin, call, ref, num, lam, ap
 from galang.domain.arith import lib as lib_arith
-from galang.gen import genexpr, genexpr2, permute, WLib, mkwlib
-from galang.types import MethodName, TMap, Dict, mkmap, Ref
+from galang.gen import genexpr, genexpr2, permute, WLib, mkwlib, assemble
+from galang.types import MethodName, TMap, Dict, mkmap, Ref, Mem
 from galang.utils import refs, print_expr
 
 from hypothesis import given, assume, example, note, settings, event, HealthCheck
@@ -10,7 +10,6 @@ from hypothesis.strategies import (text, decimals, integers, characters,
                                    from_regex, dictionaries, one_of, lists,
                                    recursive, none, booleans, floats, composite,
                                    binary, just)
-
 from ipdb import set_trace
 
 def test_let()->None:
@@ -62,6 +61,20 @@ def test_print()->None:
   assert print_expr(intrin(MethodName("add"), [('a',num(0)),('b',ref('1'))])) == "add(a=0,b=1)"
   assert print_expr(let_('a',num(33),lambda a: num(42))) == "let a = 33 in 42"
   assert print_expr(ap(lam('a',lambda a: num(42)), num(33))) == "((a -> 42) 33)"
+
+"""
+def test_assemble()->None:
+  mn = MethodName
+  mem = Mem({
+    Ref('a'): num(33),
+    Ref('b'): intrin(mn('neg'),[('a',ref('a'))]),
+    Ref('c'): intrin(mn('add'),[('a',ref('a')),('b',ref('b'))])
+  })
+  expr = assemble(Ref('c'), mem)
+  print(expr)
+  iexpr,_ = interp(expr, lib_arith, mkmap())
+  assert iexpr == IVal(0)
+"""
 
 """
 def test_genexpr2()->None:
