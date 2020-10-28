@@ -1,5 +1,5 @@
 from galang.interp import interp, IVal
-from galang.edsl import let_, let, num, intrin, call, ref, num
+from galang.edsl import let_, let, num, intrin, call, ref, num, lam, ap
 from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, genexpr2, permute, WLib, mkwlib
 from galang.types import MethodName, TMap, Dict, mkmap, Ref
@@ -60,7 +60,8 @@ def test_refs()->None:
 
 def test_print()->None:
   assert print_expr(intrin(MethodName("add"), [('a',num(0)),('b',ref('1'))])) == "add(a=0,b=1)"
-  # assert print_expr(intrin(MethodName("add"), [('a',num(0)),('b',ref('1'))])) == "add(a=0,b=1)"
+  assert print_expr(let_('a',num(33),lambda a: num(42))) == "let a = 33 in 42"
+  assert print_expr(ap(lam('a',lambda a: num(42)), num(33))) == "((a -> 42) 33)"
 
 """
 def test_genexpr2()->None:

@@ -34,6 +34,8 @@ def print_expr(e:Expr)->str:
       raise ValueError(f"Invalid value-expr '{e}'")
   elif isinstance(e, Ap):
     return f"({print_expr(e.func)} {print_expr(e.arg)})"
+  elif isinstance(e, Lam):
+    return f"({e.name} -> {print_expr(e.body)})"
   elif isinstance(e, Let):
     return f"let {e.ref.name} = {print_expr(e.expr)} in {print_expr(e.body)}"
   elif isinstance(e, Intrin):
