@@ -1,5 +1,5 @@
-from galang.types import Expr, MethodName, Ident, Mem, Val, TMap
-from galang.edsl import intrin, lam, let, ident, num, mkname
+from galang.types import Expr, MethodName, Ref, Mem, Val, TMap
+from galang.edsl import intrin, lam, let, ref, num, mkname
 from galang.interp import Lib, IExpr, LibEntry, IMem, IVal, interp
 from typing import List, Dict, Optional, Iterable, Tuple
 from collections import OrderedDict
@@ -76,7 +76,7 @@ def genexpr2(wlib:WLib,
 
   # Accumulator of Output values
   # valcache:Dict[Expr,List[IMem]] = \
-  #   {ident(f"arg-{n}"):[{Ident(f"arg-{n}"):i[n]} for i in inputs] for n in range(nargs)}
+  #   {ref(f"arg-{n}"):[{ref(f"arg-{n}"):i[n]} for i in inputs] for n in range(nargs)}
   #
   # Should be:
   # valcache:Dict[Mem,List[IMem]] = ...
@@ -90,9 +90,9 @@ def genexpr2(wlib:WLib,
   #
   # Algorithm state:
   # ---------------
-  # exprw:Dict[Ident,int] = {}
-  # exprcache:Dict[Ident,Intrin] = {}
-  # valcache:Dict[Ident,List[IExpr]] = {}
+  # exprw:Dict[Ref,int] = {}
+  # exprcache:Dict[Ref,Intrin] = {}
+  # valcache:Dict[Ref,List[IExpr]] = {}
   #
   # Algorithm outputs:
   # -----------------
@@ -107,11 +107,11 @@ def genexpr2(wlib:WLib,
   lib = {k:wl[0] for k,wl in wlib.items()}
   libws = {k:wl[1] for k,wl in wlib.items()}
 
-  exprw:Dict[Ident,int]={Ident(f"input{i}"):1 \
+  exprw:Dict[Ref,int]={Ref(f"input{i}"):1 \
                          for i in range(len(inputs))}
-  exprcache:Dict[Ident,Expr]={Ident(f"input{i}"):ident("input{i}") \
+  exprcache:Dict[Ref,Expr]={Ref(f"input{i}"):ref("input{i}") \
                               for i in range(len(inputs))}
-  valcache:Dict[Ident,List[IExpr]]={Ident(f"input{i}"):[iv for iv in inputs[i]] \
+  valcache:Dict[Ref,List[IExpr]]={Ref(f"input{i}"):[iv for iv in inputs[i]] \
                                     for i in range(len(inputs))}
 
 
@@ -122,13 +122,13 @@ def genexpr2(wlib:WLib,
       n = len(op.argnames)
       w = libws[op.name]
       nargs = len(op.argnames)
-      vws:List[Tuple[Ident,int]] = list(exprw.items())
+      vws:List[Tuple[Ref,int]] = list(exprw.items())
       for valindices in permute(weights=[a[1] for a in vws], nargs=nargs, target_weight=W-w):
-        argexprs:List[Ident] = [vws[i][0] for i in valindices]
+        argexprs:List[Ref] = [vws[i][0] for i in valindices]
         assert len(op.argnames)==len(argexprs)
         acc:List[IExpr] = []
-        e2name = Ident(mkname('val'))
-        e2expr = intrin(op.name, {nm:Val(ai) for nm,ai in zip(op.argnames, argexprs)})
+        e2name = Ref(mkname('val'))
+        e2expr = intrin(op.name, [(nm,Val(ai)) for nm,ai in zip(op.argnames, argexprs)])
         for b in range(nbatch):
           e2val,_ = interp(e2expr, TMap(lib), TMap({nm:valcache[nm][b] for nm in argexprs}))
           acc.append(e2val)

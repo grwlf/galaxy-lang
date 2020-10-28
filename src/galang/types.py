@@ -8,14 +8,14 @@ class Const:
   const:int
 
 @dataclass(frozen=True, eq=True)
-class Ident:
-  ident:str
+class Ref:
+  name:str
 
-Expr = Union['Val', 'Lam', 'Ap', 'Intrin']
+Expr = Union['Val', 'Lam', 'Ap', 'Let', 'Intrin']
 
 @dataclass(frozen=True, eq=True)
 class Val:
-  val:Union[Const, Ident]
+  val:Union[Const, Ref]
 
 @dataclass(frozen=True)
 class Ap:
@@ -23,16 +23,23 @@ class Ap:
   arg:Expr
 
 @dataclass(frozen=True)
+class Let:
+  """ Here: Let is more a syntactic sugar for `Ap (Lam ref body) expr` """
+  ref:Ref
+  expr:Expr
+  body:Expr
+
+@dataclass(frozen=True)
 class Lam:
   name:str # Pattern
-  body:Expr # May refer to `Ident(name)`
+  body:Expr # May refer to `Ref(name)`
 
 MethodName = NamedTuple('MethodName', [('val',str)])
 
 @dataclass(frozen=True)
 class Intrin:
   name:MethodName
-  args:Map[str,Expr]
+  args:Map[Tuple[int,str],Expr]
 
 
 M = TypeVar('M')
@@ -58,5 +65,5 @@ class TMap(Generic[M,I]):
 def mkmap(d:Optional[Dict[M,I]]=None)->TMap[M,I]:
   return TMap(d if d is not None else {})
 
-Mem = TMap[Ident,Expr]
+Mem = TMap[Ref,Expr]
 

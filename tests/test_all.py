@@ -1,9 +1,9 @@
 from galang.interp import interp, IVal
-from galang.edsl import let_, let, num, intrin, call
+from galang.edsl import let_, let, num, intrin, call, ref, num
 from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, genexpr2, permute, WLib, mkwlib
-from galang.types import MethodName, TMap, Dict, mkmap, Ident
-from galang.utils import idents
+from galang.types import MethodName, TMap, Dict, mkmap, Ref
+from galang.utils import refs, print_expr
 
 from hypothesis import given, assume, example, note, settings, event, HealthCheck
 from hypothesis.strategies import (text, decimals, integers, characters,
@@ -22,7 +22,7 @@ def test_let()->None:
 def test_wlet2()->None:
   e = let(num(33), lambda a:
       let(num(42), lambda b:
-          intrin(MethodName("add"), {'a':a,'b':b})))
+          intrin(MethodName("add"), [('a',a),('b',b)])))
 
   v,_ = interp(e, lib_arith, mkmap())
   assert isinstance(v, IVal)
@@ -52,12 +52,15 @@ def test_tmap()->None:
   cache[x] = True # Check hashability
   assert cache[x] == True
 
-def test_idents()->None:
+def test_refs()->None:
   e = let_('a', num(33), lambda a:
       let_('b', num(42), lambda b:
-          intrin(MethodName("add"), {'a':a,'b':b})))
-  assert idents(e)==set([Ident('a'),Ident('b')])
+          intrin(MethodName("add"), [('a',a),('b',b)])))
+  assert refs(e)==set([Ref('a'),Ref('b')])
 
+def test_print()->None:
+  assert print_expr(intrin(MethodName("add"), [('a',num(0)),('b',ref('1'))])) == "add(a=0,b=1)"
+  # assert print_expr(intrin(MethodName("add"), [('a',num(0)),('b',ref('1'))])) == "add(a=0,b=1)"
 
 """
 def test_genexpr2()->None:

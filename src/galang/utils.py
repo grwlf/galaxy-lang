@@ -1,28 +1,47 @@
-from galang.types import Expr, Ident, TMap, Intrin, Lam, Val, Const, Ap
+from galang.types import Expr, Ref, TMap, Intrin, Lam, Val, Const, Ap, Let
 from typing import List, Tuple, Dict, Union, Callable, Set
 
 
-def idents(e:Expr)->Set[Ident]:
+def refs(e:Expr)->Set[Ref]:
   if isinstance(e, Val):
     if isinstance(e.val, Const):
       return set()
-    elif isinstance(e.val, Ident):
+    elif isinstance(e.val, Ref):
       return set([e.val])
     else:
       raise ValueError(f"Invalid value expression {e}")
   elif isinstance(e, Lam):
-    return idents(e.body)
+    return refs(e.body)
+  elif isinstance(e, Let):
+    return set([e.ref]) | refs(e.expr) | refs(e.body)
   elif isinstance(e, Ap):
-    return idents(e.func) | idents(e.arg)
+    return refs(e.func) | refs(e.arg)
   elif isinstance(e, Intrin):
-    acc:Set[Ident] = set()
+    acc:Set[Ref] = set()
     for a in e.args.values():
-      acc |= idents(a)
+      acc |= refs(a)
     return acc
   else:
     raise ValueError(f"Invalid expression {e}")
 
+def print_expr(e:Expr)->str:
+  if isinstance(e,Val):
+    if isinstance(e.val, Ref):
+      return f"{e.val.name}"
+    elif isinstance(e.val, Const):
+      return f"{e.val.const}"
+    else:
+      raise ValueError(f"Invalid value-expr '{e}'")
+  elif isinstance(e, Ap):
+    return f"({print_expr(e.func)} {print_expr(e.arg)})"
+  elif isinstance(e, Let):
+    return f"let {e.ref.name} = {print_expr(e.expr)} in {print_expr(e.body)}"
+  elif isinstance(e, Intrin):
+    return f"{e.name.val}({','.join([k+'='+print_expr(v) for (_,k),v in sorted(e.args.items())])})"
+  else:
+    raise ValueError(f"Invalid expression '{e}'")
 
+"""
 def dmerge(dicts:List[Dict[Any,Any]], ctr=int, agg=lambda a,b:a+b)->Dict[Any,Any]:
   acc:Dict[Any,Any] = defaultdict(ctr)
   for k,v in chain(*[d.items() for d in dicts]):
@@ -111,3 +130,5 @@ def print_expr(e:Expr)->str:
     return f"{e.name.val}({','.join([print_expr(a) for a in e.args])})"
   else:
     raise ValueError(f"Invalid expression {e}")
+"""
+
