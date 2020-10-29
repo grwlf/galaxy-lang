@@ -8,7 +8,10 @@ def _mul(a,b):
   return a*b
 
 def _div(a,b):
-  return a//b
+  try:
+    return a/b
+  except ZeroDivisionError:
+    return float('inf')
 
 def _neg(a):
   return -a

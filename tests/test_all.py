@@ -1,4 +1,4 @@
-from galang.interp import interp, IVal
+from galang.interp import interp, IVal, IExpr
 from galang.edsl import let_, let, num, intrin, call, ref, num, lam, ap
 from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, genexpr2, permute, WLib, mkwlib, assemble
@@ -76,13 +76,19 @@ def test_assemble()->None:
   assert iexpr == IVal(0)
 """
 
-"""
+def ival(n:int)->IVal:
+  r,_ = interp(num(n), lib_arith, mkmap())
+  assert isinstance(r,IVal)
+  return r
+
 def test_genexpr2()->None:
   wlib = mkwlib(lib_arith, 5)
-  g=genexpr2(3,wlib)
-  e1 = next(g)
-  e2 = next(g)
-"""
+  g = genexpr2(wlib, [[ival(0),ival(1),ival(2)]])
+  for i in range(1050):
+    ref,mem,vals,w = next(g)
+    # print(w, print_expr(mem[ref]))
+
+  # e2 = next(g)
 
 
 

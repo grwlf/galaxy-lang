@@ -79,7 +79,7 @@ def assemble(top:Ref, mem:Mem)->Expr:
 
 
 def genexpr2(wlib:WLib,
-             inputs:List[List[IVal]])->Iterable[Tuple[Expr,List[IExpr],int]]:
+             inputs:List[List[IVal]])->Iterable[Tuple[Ref,Dict[Ref,Expr],List[IExpr],int]]:
   """ Generate lambda-expression with `len(inputs)` arguments
   FIXME: broken!
   """
@@ -148,5 +148,5 @@ def genexpr2(wlib:WLib,
         valcache[e2name] = acc
         exprcache[e2name] = e2expr
         exprw[e2name] = W
-        yield (e2expr,acc,W)
+        yield (e2name,exprcache,acc,W)
 
