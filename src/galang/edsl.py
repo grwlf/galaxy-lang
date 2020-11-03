@@ -1,5 +1,5 @@
 from galang.types import (Const, Ref, Expr, Lam, Ap, Callable, Tuple, Iterable,
-                          Intrin, List, Dict, Val, MethodName, Map, Let)
+                          Intrin, List, Dict, Val, MethodName, TMap, Let)
 
 from collections import OrderedDict
 # from contextlib import contextmanager
@@ -39,7 +39,7 @@ def call(func:Expr, args:Iterable[Expr])->Expr:
 
 def intrin(name:MethodName, args:List[Tuple[str,Expr]])->Expr:
   acc = OrderedDict()
-  for i,(k,v) in enumerate(args):
-    acc[(i,k)] = v
-  return Intrin(name, Map(acc))
+  for (k,v) in args:
+    acc[k] = v
+  return Intrin(name, TMap(acc))
 

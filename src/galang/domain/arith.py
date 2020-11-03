@@ -1,24 +1,25 @@
-from galang.interp import Lib, LibEntry, IVal, MethodName, TMap
+from sys import maxsize
+from galang.interp import Lib, LibEntry, IVal, MethodName, TMap, IError, IExpr
 
 
-def _add(a,b):
-  return a+b
+def _add(a,b)->IExpr:
+  return IVal(a+b)
 
-def _mul(a,b):
-  return a*b
+def _mul(a,b)->IExpr:
+  return IVal(a*b)
 
-def _div(a,b):
+def _div(a,b)->IExpr:
   try:
-    return a/b
+    return IVal(a//b)
   except ZeroDivisionError:
-    return float('inf')
+    return IError('Division by zero')
 
-def _neg(a):
-  return -a
+def _neg(a)->IExpr:
+  return IVal(-a)
 
 def unpack(f):
   def _f(args):
-    return IVal(f(**{an:a.val for an,a in args.items()}))
+    return f(**{an:a.val for an,a in args.items()})
   return _f
 
 def mn(n:str)->MethodName:

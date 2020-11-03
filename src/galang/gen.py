@@ -1,8 +1,9 @@
 from galang.types import Expr, MethodName, Ref, Mem, Val, TMap, Ref
 from galang.edsl import intrin, lam, let, ref, num, mkname, let_
-from galang.interp import Lib, IExpr, LibEntry, IMem, IVal, interp
+from galang.interp import Lib, IExpr, LibEntry, IMem, IVal, IError, interp
 from galang.utils import refs
-from typing import List, Dict, Optional, Iterable, Tuple, Set
+from typing import (List, Dict, Optional, Iterable, Tuple, Set, Iterator,
+                    Callable)
 from collections import OrderedDict
 
 from ipdb import set_trace
@@ -76,10 +77,11 @@ def assemble(top:Ref, mem:Mem)->Expr:
     frontier |= refs(expr) - visited
   return acc
 
-
+OpFilter=Dict[MethodName, Callable[[Expr,List[IExpr]],bool]]
 
 def genexpr2(wlib:WLib,
-             inputs:List[List[IVal]])->Iterable[Tuple[Ref,Dict[Ref,Expr],List[IExpr],int]]:
+             inputs:List[List[IVal]]
+             )->Iterator[Tuple[Ref,Dict[Ref,Expr],List[IExpr],int]]:
   """ Generate lambda-expression with `len(inputs)` arguments
   FIXME: broken!
   """
@@ -136,14 +138,19 @@ def genexpr2(wlib:WLib,
       nargs = len(op.argnames)
       vws:List[Tuple[Ref,int]] = list(exprw.items())
       for valindices in permute(weights=[a[1] for a in vws], nargs=nargs, target_weight=W-w):
-        argexprs:List[Ref] = [vws[i][0] for i in valindices]
-        assert len(op.argnames)==len(argexprs)
-        acc:List[IExpr] = []
+        argrefs:List[Ref] = [vws[i][0] for i in valindices]
+        assert len(op.argnames)==len(argrefs)
         e2name = Ref(mkname('val'))
-        e2expr = intrin(op.name, [(nm,Val(ai)) for nm,ai in zip(op.argnames, argexprs)])
+        e2expr = intrin(op.name, [(nm,Val(ai)) for nm,ai in zip(op.argnames, argrefs)])
+
+        # TODO: Make this block customizable via callbacks
+        acc:List[IExpr] = []
         for b in range(nbatch):
-          e2val,_ = interp(e2expr, TMap(lib), TMap({nm:valcache[nm][b] for nm in argexprs}))
+          e2val,_ = interp(e2expr, TMap(lib), TMap({nm:valcache[nm][b] for nm in argrefs}))
           acc.append(e2val)
+
+        if any([isinstance(x,IError) for x in acc]):
+          continue
 
         valcache[e2name] = acc
         exprcache[e2name] = e2expr

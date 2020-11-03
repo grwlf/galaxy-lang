@@ -1,7 +1,37 @@
 from typing import (Union, Callable, List, Iterable, Dict, NamedTuple, Set,
                     Tuple, FrozenSet, TypeVar, Generic, Optional, Tuple)
 from dataclasses import dataclass
-from immutables import Map
+# from immutables import Map
+from frozenordereddict import FrozenOrderedDict
+
+
+M = TypeVar('M')
+I = TypeVar('I')
+
+class TMap(Generic[M,I]):
+  """ Wrapper of `immutables.Map` with simpler type information. `immutables`
+  seems to provide their own typeing, but we want to stay compatible with older
+  versions of mypy. """
+  def __init__(self, *args, **kwargs)->None:
+    self.map = FrozenOrderedDict(*args, **kwargs)
+  def __getitem__(self, key:M)->I:
+    return self.map.__getitem__(key)
+  def __hash__(self):
+    return self.map.__hash__()
+  def get(self, key:M, default:Optional[I]=None)->I:
+    return self.map.get(key,default)
+  def set(self, key:M, val:I)->'TMap[M,I]':
+    return TMap(self.map.copy({key:val}))
+  def items(self)->Iterable[Tuple[M,I]]:
+    return self.map.items()
+  def values(self)->Iterable[I]:
+    return self.map.values()
+  def keys(self)->Iterable[M]:
+    return self.map.keys()
+
+def mkmap(d:Optional[Dict[M,I]]=None)->TMap[M,I]:
+  return TMap(d if d is not None else {})
+
 
 @dataclass(frozen=True, eq=True)
 class Const:
@@ -39,31 +69,8 @@ MethodName = NamedTuple('MethodName', [('val',str)])
 @dataclass(frozen=True)
 class Intrin:
   name:MethodName
-  args:Map[Tuple[int,str],Expr]
+  args:TMap[str,Expr]
 
-
-M = TypeVar('M')
-I = TypeVar('I')
-
-class TMap(Generic[M,I]):
-  """ Wrapper of `immutables.Map` with simpler type information. `immutables`
-  seems to provide their own typeing, but we want to stay compatible with older
-  versions of mypy. """
-  def __init__(self, *args, **kwargs)->None:
-    self.map = Map(*args, **kwargs)
-  def __getitem__(self, key:M)->I:
-    return self.map.__getitem__(key)
-  def __hash__(self):
-    return self.map.__hash__()
-  def get(self, key:M, default:Optional[I]=None)->I:
-    return self.map.get(key,default)
-  def set(self, key:M, val:I)->'TMap[M,I]':
-    return TMap(self.map.set(key,val))
-  def items(self)->Iterable[Tuple[M,I]]:
-    return self.map.items()
-
-def mkmap(d:Optional[Dict[M,I]]=None)->TMap[M,I]:
-  return TMap(d if d is not None else {})
 
 Mem = TMap[Ref,Expr]
 

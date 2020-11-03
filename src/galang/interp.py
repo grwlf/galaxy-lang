@@ -8,7 +8,11 @@ from galang.types import (Expr, Ref, Ap, Val, Const, Lam, Intrin, MethodName,
 
 import numpy as np
 
-IExpr = Union['IVal', 'IAp', 'ILam']
+IExpr = Union['IVal', 'IAp', 'ILam', 'IError']
+
+@dataclass(frozen=True)
+class IError:
+  msg:str
 
 @dataclass(frozen=True)
 class IVal:
@@ -55,7 +59,7 @@ def interp(expr:Expr, lib:Lib, m:IMem)->Tuple[IExpr,IMem]:
   elif isinstance(expr, Intrin):
     libentry = lib[expr.name]
     iargs = {}
-    for (aid,aname),aexpr in expr.args.items():
+    for aname,aexpr in expr.args.items():
       a,_ = interp(aexpr, lib, m)
       iargs.update({aname: a})
     return (libentry.impl(iargs), m)

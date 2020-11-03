@@ -39,7 +39,7 @@ def print_expr(e:Expr)->str:
   elif isinstance(e, Let):
     return f"let {e.ref.name} = {print_expr(e.expr)} in {print_expr(e.body)}"
   elif isinstance(e, Intrin):
-    return f"{e.name.val}({','.join([k+'='+print_expr(v) for (_,k),v in sorted(e.args.items())])})"
+    return f"{e.name.val}({','.join([k+'='+print_expr(v) for k,v in sorted(e.args.items())])})"
   else:
     raise ValueError(f"Invalid expression '{e}'")
 

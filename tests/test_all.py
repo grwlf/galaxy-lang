@@ -86,9 +86,7 @@ def test_genexpr2()->None:
   g = genexpr2(wlib, [[ival(0),ival(1),ival(2)]])
   for i in range(1050):
     ref,mem,vals,w = next(g)
-    # print(w, print_expr(mem[ref]))
-
-  # e2 = next(g)
+    print(w, print_expr(mem[ref]), vals)
 
 
 
