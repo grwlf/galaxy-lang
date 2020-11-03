@@ -11,6 +11,22 @@ let
   pyls = self.python-language-server.override { providers=["pycodestyle"]; };
   pyls-mypy = self.pyls-mypy.override { python-language-server=pyls; };
 
+  frozenordereddict = buildPythonPackage rec {
+    name = "frozenordereddict";
+    src = fetchgit {
+      url = "https://github.com/wsmith323/frozenordereddict";
+      rev = "8837a7e2b55cf8531793b0ec5ad40d56c500ec0f";
+      sha256 = "sha256:0qr88gg5bsw30dca8p7a3dzqaimdwball0mmlwvlcr6mw6jn3mcc";
+    };
+    postFixup = ''
+      for dst in `find $out -path '*frozenordereddict/__init__.py'` ; do
+        sed -i 's/from collections import Mapping/from collections.abc import Mapping/g' $dst
+        for src in `find $src -path '*frozenordereddict/VERSION.txt'` ; do
+          cp $src `dirname $dst`
+        done
+      done
+    '';
+  };
 
   parsec = buildPythonPackage rec {
     name = "parsec";
@@ -45,7 +61,10 @@ let
       pytest-mypy
       ipdb
       hypothesis
+
       immutables
+      frozendict
+      frozenordereddict
 
       pytorch
     ]);
