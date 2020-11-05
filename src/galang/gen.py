@@ -64,26 +64,12 @@ def mkwlib(lib:Lib, default:int, weights:Optional[Dict[MethodName,int]]=None)->W
   weights_ = weights if weights is not None else {}
   return {k:(e,weights_.get(k,default)) for k,e in lib.items()}
 
-def assemble(top:Ref, mem:Mem)->Expr:
-  """ FIXME: has a bug, doesn't work """
-  visited:Set[Ref] = set()
-  frontier:Set[Ref] = set([top])
-  acc:Expr = mem[top]
-  while frontier:
-    i = frontier.pop()
-    expr = mem[i]
-    acc = let_(i.name, expr, lambda _: acc)
-    visited.add(i)
-    frontier |= refs(expr) - visited
-  return acc
-
 OpFilter=Dict[MethodName, Callable[[Expr,List[IExpr]],bool]]
 
 def genexpr2(wlib:WLib,
-             inputs:List[List[IVal]]
-             )->Iterator[Tuple[Ref,Dict[Ref,Expr],List[IExpr],int]]:
+             inputs:List[IMem]
+             )->Iterator[Tuple[Ref,TMap[Ref,Expr],List[IExpr],int]]:
   """ Generate lambda-expression with `len(inputs)` arguments
-  FIXME: broken!
   """
   # assert all([len(i)==nargs for i in inputs]), \
   #   f"All inputs should contain exactly `nargs` arguments ({nargs})." \
@@ -115,19 +101,17 @@ def genexpr2(wlib:WLib,
   #
   # TODO: Could we update this weights without evaluating expressions?
 
-  # All inputs should be of the same size
-  assert all([len(inputs[i])==len(inputs[0]) for i in range(len(inputs))])
-  nbatch = len(inputs[0]) if len(inputs)>0 else 1
+  # All inputs should provide the same input names
+  assert all([i.keys()==inputs[0].keys() for i in inputs])
+  nbatch = len(inputs)
 
   lib = {k:wl[0] for k,wl in wlib.items()}
   libws = {k:wl[1] for k,wl in wlib.items()}
 
-  exprw:Dict[Ref,int]={Ref(f"input{i}"):1 \
-                         for i in range(len(inputs))}
-  exprcache:Dict[Ref,Expr]={Ref(f"input{i}"):ref("input{i}") \
-                              for i in range(len(inputs))}
-  valcache:Dict[Ref,List[IExpr]]={Ref(f"input{i}"):[iv for iv in inputs[i]] \
-                                    for i in range(len(inputs))}
+  exprcache:Dict[Ref,Expr]={}
+  exprw:Dict[Ref,int]={k:1 for k in inputs[0].keys()}
+  valcache:Dict[Ref,List[IExpr]]={k:[i[k] for i in inputs] \
+                                    for k in inputs[0].keys()}
 
   W = 0
   while True:
@@ -155,5 +139,5 @@ def genexpr2(wlib:WLib,
         valcache[e2name] = acc
         exprcache[e2name] = e2expr
         exprw[e2name] = W
-        yield (e2name,exprcache,acc,W)
+        yield (e2name,TMap(exprcache),acc,W)
 

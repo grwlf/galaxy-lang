@@ -1,5 +1,6 @@
-from galang.types import Expr, Ref, TMap, Intrin, Lam, Val, Const, Ap, Let
-from typing import List, Tuple, Dict, Union, Callable, Set
+from galang.types import Expr, Ref, TMap, Intrin, Lam, Val, Const, Ap, Let, Mem
+from galang.edsl import let_
+from typing import List, Tuple, Dict, Union, Callable, Set, Optional
 
 
 def refs(e:Expr)->Set[Ref]:
@@ -42,6 +43,40 @@ def print_expr(e:Expr)->str:
     return f"{e.name.val}({','.join([k+'='+print_expr(v) for k,v in sorted(e.args.items())])})"
   else:
     raise ValueError(f"Invalid expression '{e}'")
+
+def gather(top:Ref, mem:Mem)->Expr:
+  mentioned:Set[Ref] = {top}
+  acc:Optional[Expr] = None
+  for ref,expr in reversed(list(mem.items())):
+    if ref in mentioned:
+      mentioned |= refs(expr)
+      if acc is None:
+        acc = expr
+      else:
+        acc2:Expr = acc
+        acc = let_(ref.name, expr, lambda x: acc2)
+  assert acc is not None
+  return acc
+
+
+
+
+
+"""
+def assemble(top:Ref, mem:Mem)->Expr:
+  "" FIXME: has a bug, doesn't work ""
+  visited:Set[Ref] = set()
+  frontier:Set[Ref] = set([top])
+  acc:Expr = mem[top]
+  while frontier:
+    i = frontier.pop()
+    expr = mem[i]
+    acc = let_(i.name, expr, lambda _: acc)
+    visited.add(i)
+    frontier |= refs(expr) - visited
+  return acc
+"""
+
 
 """
 def dmerge(dicts:List[Dict[Any,Any]], ctr=int, agg=lambda a,b:a+b)->Dict[Any,Any]:

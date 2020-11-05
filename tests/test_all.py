@@ -1,15 +1,16 @@
-from galang.interp import interp, IVal, IExpr
+from galang.interp import interp, IVal, IExpr, IMem
 from galang.edsl import let_, let, num, intrin, call, ref, num, lam, ap
 from galang.domain.arith import lib as lib_arith
-from galang.gen import genexpr, genexpr2, permute, WLib, mkwlib, assemble
+from galang.gen import genexpr, genexpr2, permute, WLib, mkwlib
 from galang.types import MethodName, TMap, Dict, mkmap, Ref, Mem
-from galang.utils import refs, print_expr
+from galang.utils import refs, print_expr, gather
 
 from hypothesis import given, assume, example, note, settings, event, HealthCheck
 from hypothesis.strategies import (text, decimals, integers, characters,
                                    from_regex, dictionaries, one_of, lists,
                                    recursive, none, booleans, floats, composite,
                                    binary, just)
+from pytest import raises
 from ipdb import set_trace
 
 def test_let()->None:
@@ -62,19 +63,16 @@ def test_print()->None:
   assert print_expr(let_('a',num(33),lambda a: num(42))) == "let a = 33 in 42"
   assert print_expr(ap(lam('a',lambda a: num(42)), num(33))) == "((a -> 42) 33)"
 
-"""
-def test_assemble()->None:
+def test_gather()->None:
   mn = MethodName
   mem = Mem({
     Ref('a'): num(33),
     Ref('b'): intrin(mn('neg'),[('a',ref('a'))]),
     Ref('c'): intrin(mn('add'),[('a',ref('a')),('b',ref('b'))])
   })
-  expr = assemble(Ref('c'), mem)
-  print(expr)
+  expr = gather(Ref('c'), mem)
   iexpr,_ = interp(expr, lib_arith, mkmap())
   assert iexpr == IVal(0)
-"""
 
 def ival(n:int)->IVal:
   r,_ = interp(num(n), lib_arith, mkmap())
@@ -83,10 +81,17 @@ def ival(n:int)->IVal:
 
 def test_genexpr2()->None:
   wlib = mkwlib(lib_arith, 5)
-  g = genexpr2(wlib, [[ival(0),ival(1),ival(2)]])
-  for i in range(1050):
+  imem:IMem = mkmap({Ref('a'):ival(0),
+                     Ref('b'):ival(1),
+                     Ref('c'):ival(2)})
+  g = genexpr2(wlib, [imem])
+  for i in range(1000):
     ref,mem,vals,w = next(g)
-    print(w, print_expr(mem[ref]), vals)
+    expr = gather(ref,mem)
+    iexpr,_ = interp(expr, lib_arith, imem)
+    assert len(vals)==1
+    assert iexpr==vals[0]
+    print(print_expr(expr),iexpr)
 
 
 
