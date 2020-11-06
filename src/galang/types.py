@@ -13,21 +13,23 @@ class TMap(Generic[M,I]):
   seems to provide their own typeing, but we want to stay compatible with older
   versions of mypy. """
   def __init__(self, *args, **kwargs)->None:
-    self.map = FrozenOrderedDict(*args, **kwargs)
+    self.dict = FrozenOrderedDict(*args, **kwargs)
   def __getitem__(self, key:M)->I:
-    return self.map.__getitem__(key)
+    return self.dict.__getitem__(key)
   def __hash__(self):
-    return self.map.__hash__()
+    return self.dict.__hash__()
   def get(self, key:M, default:Optional[I]=None)->I:
-    return self.map.get(key,default)
+    return self.dict.get(key,default)
   def set(self, key:M, val:I)->'TMap[M,I]':
-    return TMap(self.map.copy({key:val}))
+    return TMap(self.dict.copy({key:val}))
   def items(self)->Iterable[Tuple[M,I]]:
-    return self.map.items()
+    return self.dict.items()
   def values(self)->Iterable[I]:
-    return self.map.values()
+    return self.dict.values()
   def keys(self)->Iterable[M]:
-    return self.map.keys()
+    return self.dict.keys()
+  def __eq__(self,other):
+    return self.dict==other.dict
 
 def mkmap(d:Optional[Dict[M,I]]=None)->TMap[M,I]:
   return TMap(d if d is not None else {})

@@ -4,6 +4,7 @@ from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, genexpr2, permute, WLib, mkwlib
 from galang.types import MethodName, TMap, Dict, mkmap, Ref, Mem
 from galang.utils import refs, print_expr, gather
+from galang.ser import json2t, t2json
 
 from hypothesis import given, assume, example, note, settings, event, HealthCheck
 from hypothesis.strategies import (text, decimals, integers, characters,
@@ -13,13 +14,22 @@ from hypothesis.strategies import (text, decimals, integers, characters,
 from pytest import raises
 from ipdb import set_trace
 
-def test_let()->None:
+def test_eq()->None:
+  assert let_('a', num(33), lambda x: x) == let_('a', num(33), lambda x: x)
+  assert intrin(MethodName("add"), [('a',num(1)),('b',num(2))]) == \
+         intrin(MethodName("add"), [('a',num(1)),('b',num(2))])
+  assert ap(ref('a'),ref('b')) == ap(ref('a'),ref('b'))
+  assert lam('a',lambda x:num(44)) == lam('a',lambda x:num(44))
+  assert lam('a',lambda x:num(44)) != lam('a',lambda x:num(0))
+  assert lam('a',lambda x:num(44)) != lam('b',lambda x:num(44))
+
+def test_let1()->None:
   e = let(num(33), lambda x: x)
   v,_ = interp(e, lib_arith, mkmap())
   assert isinstance(v, IVal)
   assert v.val==33
 
-def test_wlet2()->None:
+def test_let2()->None:
   e = let(num(33), lambda a:
       let(num(42), lambda b:
           intrin(MethodName("add"), [('a',a),('b',b)])))
@@ -92,6 +102,22 @@ def test_genexpr2()->None:
     assert len(vals)==1
     assert iexpr==vals[0]
     print(print_expr(expr),iexpr)
+
+
+def test_serjson():
+  wlib = mkwlib(lib_arith, 5)
+  imem:IMem = mkmap({Ref('a'):ival(0),
+                     Ref('b'):ival(1),
+                     Ref('c'):ival(2)})
+  g = genexpr2(wlib, [imem])
+  for i in range(1000):
+    ref,mem,vals,w = next(g)
+    expr1 = gather(ref,mem)
+    expr2 = json2t(t2json(expr1))
+    print(print_expr(expr1))
+    print(print_expr(expr2))
+    assert expr1==expr2
+
 
 
 
