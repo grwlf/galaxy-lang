@@ -2,7 +2,15 @@ from galang.types import (Expr, Ref, TMap, Intrin, Lam, Val, Const, Ap, Let,
                           Mem, MethodName)
 from galang.edsl import num, ref, let_, lam, ap, lam, intrin
 
+from typing import List
 from json import loads as json_loads, dumps as json_dumps
+
+def ts2json(es:List[Expr])->str:
+  return json_dumps([t2dict(e) for e in es])
+
+def json2ts(j:str)->List[Expr]:
+  return [dict2t(x) for x in json_loads(j)]
+
 
 def t2json(e:Expr)->str:
   return json_dumps(t2dict(e))
@@ -13,27 +21,27 @@ def json2t(j:str)->Expr:
 def t2dict(e:Expr)->dict:
   if isinstance(e, Val):
     if isinstance(e.val, Const):
-      return {'typ':'val', 'val':{'typ':'const', 'val':e.val.const}}
+      return {'t':'val', 'val':{'t':'const', 'val':e.val.const}}
     elif isinstance(e.val, Ref):
-      return {'typ':'val', 'val':{'typ':'ref', 'val':e.val.name}}
+      return {'t':'val', 'val':{'t':'ref', 'val':e.val.name}}
     else:
       raise ValueError(f"Invalid value expression {e}")
   elif isinstance(e, Lam):
-    return {'typ':'lam', 'name':e.name, 'body':t2dict(e.body)}
+    return {'t':'lam', 'name':e.name, 'body':t2dict(e.body)}
   elif isinstance(e, Let):
-    return {'typ':'let', 'ref':e.ref.name, 'expr':t2dict(e.expr), 'body':t2dict(e.body)}
+    return {'t':'let', 'ref':e.ref.name, 'expr':t2dict(e.expr), 'body':t2dict(e.body)}
   elif isinstance(e, Ap):
-    return {'typ':'ap', 'func':t2dict(e.func), 'arg':t2dict(e.arg)}
+    return {'t':'ap', 'func':t2dict(e.func), 'arg':t2dict(e.arg)}
   elif isinstance(e, Intrin):
-    return {'typ':'intrin', 'name':e.name.val, 'args':[(n,t2dict(a)) for n,a in e.args.dict.items()]}
+    return {'t':'intrin', 'name':e.name.val, 'args':[(n,t2dict(a)) for n,a in e.args.dict.items()]}
   else:
     raise ValueError(f"Invalid expression {e}")
 
 
 def dict2t(j:dict)->Expr:
-  typ = j['typ']
+  typ = j['t']
   if typ == 'val':
-    vtyp = j['val']['typ']
+    vtyp = j['val']['t']
     if vtyp == 'const':
       return num(j['val']['val'])
     elif vtyp == 'ref':
