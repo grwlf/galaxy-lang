@@ -8,35 +8,16 @@ from collections import OrderedDict
 
 from ipdb import set_trace
 
-def genexpr(nargs:int)->Expr:
-  """ Generate lambda-expression with `nargs` arguments """
-
-  def _genbody(avail:List[Expr]):
-    return num(0)
-
-  def _genlam(avail:List[Expr])->Expr:
-    def _f(x):
-      avail2 = avail + [x]
-      return _genbody(avail2) if len(avail2)==nargs else _genlam(avail2)
-    return lam(f'arg-{nargs}', _f)
-
-  return _genlam([])
-
-
-# def permute1(n:int, w:int)->List[int]:
-#   """ Iterate over all permutations of `n` integer weights which sum up to `w`.
-#   E.g.
-#   for `w=1` => `[[0,1],[1,0]]`
-#       `w=2` => `[[0,1,1],[1,0,1],[1,1,0],[0,0,2],[0,2,0],[2,0,0]]`
-#       ...
-#   """
-#   assert w==0, f'Case of {w} is not implemented'
-#   return []
-
 
 def permute(weights:List[int], nargs:int, target_weight:int)->List[List[int]]:
   """ Return all combinations of indeces of `ws` of length `n` which sum up to
-  `W` """
+
+  Iterate over all permutations of `weights` sum up to `target_weight`.
+  E.g.
+  for `w=1` => `[[0,1],[1,0]]`
+      `w=2` => `[[0,1,1],[1,0,1],[1,1,0],[0,0,2],[0,2,0],[2,0,0]]`
+      ...
+ """
   ws = weights
   n = nargs
   W = target_weight
@@ -66,40 +47,24 @@ def mkwlib(lib:Lib, default:int, weights:Optional[Dict[MethodName,int]]=None)->W
 
 OpFilter=Dict[MethodName, Callable[[Expr,List[IExpr]],bool]]
 
-def genexpr2(wlib:WLib,
-             inputs:List[IMem]
-             )->Iterator[Tuple[Ref,TMap[Ref,Expr],List[IExpr],int]]:
-  """ Generate lambda-expression with `len(inputs)` arguments
-  """
-  # assert all([len(i)==nargs for i in inputs]), \
-  #   f"All inputs should contain exactly `nargs` arguments ({nargs})." \
-  #   f"The following inputs are invalid: {[i for i in inputs if len(i)!=nargs]}"
+def genexpr(wlib:WLib,
+            inputs:List[IMem]
+            )->Iterator[Tuple[Ref,TMap[Ref,Expr],List[IExpr],int]]:
+  """ Iterate over lambda-expression with `len(inputs)` arguments
 
-  # Accumulator of Output values
-  # valcache:Dict[Expr,List[IMem]] = \
-  #   {ref(f"arg-{n}"):[{ref(f"arg-{n}"):i[n]} for i in inputs] for n in range(nargs)}
-  #
-  # Should be:
-  # valcache:Dict[Mem,List[IMem]] = ...
-  #
-  # Hint: Expressions depend on weights only via filters
-  #
-  # Algorithm inputs:
-  # ----------------
-  # wlib:WLib
-  # inputs:List[List[IVal]]
-  #
-  # Algorithm state:
-  # ---------------
-  # exprw:Dict[Ref,int] = {}
-  # exprcache:Dict[Ref,Intrin] = {}
-  # valcache:Dict[Ref,List[IExpr]] = {}
-  #
-  # Algorithm outputs:
-  # -----------------
-  # Expressions accumulated from exprcache, its weight and List[IVal]
-  #
-  # TODO: Could we update this weights without evaluating expressions?
+  Arguments:
+  * `wlib`: Weighted library of primitive operations. See also `mkwlib`.
+  * `inputs`: Collection of the inputs on which to grow the expression. All
+    inputs should be of the same size and use same names.
+
+  Yields a tuple of:
+  * Top-level reference `Ref`
+  * Map of `Ref -> Intrin`. Where `Intrin`s may contain more refs from the same
+    map.
+  * List of output expressions. Size of this list is equal to the size of
+    list of `inputs`.
+  * Current weight of the expression.
+  """
 
   # All inputs should provide the same input names
   assert all([i.keys()==inputs[0].keys() for i in inputs])

@@ -1,7 +1,7 @@
 from galang.interp import interp, IVal, IExpr, IMem
 from galang.edsl import let_, let, num, intrin, call, ref, num, lam, ap
 from galang.domain.arith import lib as lib_arith
-from galang.gen import genexpr, genexpr2, permute, WLib, mkwlib
+from galang.gen import genexpr, permute, WLib, mkwlib
 from galang.types import MethodName, TMap, Dict, mkmap, Ref, Mem
 from galang.utils import refs, print_expr, gather
 from galang.ser import json2t, t2json
@@ -37,12 +37,6 @@ def test_let2()->None:
   v,_ = interp(e, lib_arith, mkmap())
   assert isinstance(v, IVal)
   assert v.val==33+42
-
-def test_genexpr()->None:
-  e = genexpr(3)
-  v,_ = interp(call(e, [num(x) for x in [1,2,3]]), lib_arith, mkmap())
-  assert isinstance(v, IVal), f"{v}"
-  assert v.val==0
 
 @given(ws=lists(integers(1,100),max_size=5),
        n=integers(0,4),
@@ -89,12 +83,12 @@ def ival(n:int)->IVal:
   assert isinstance(r,IVal)
   return r
 
-def test_genexpr2()->None:
+def test_genexpr()->None:
   wlib = mkwlib(lib_arith, 5)
   imem:IMem = mkmap({Ref('a'):ival(0),
                      Ref('b'):ival(1),
                      Ref('c'):ival(2)})
-  g = genexpr2(wlib, [imem])
+  g = genexpr(wlib, [imem])
   for i in range(1000):
     ref,mem,vals,w = next(g)
     expr = gather(ref,mem)
@@ -109,7 +103,7 @@ def test_serjson():
   imem:IMem = mkmap({Ref('a'):ival(0),
                      Ref('b'):ival(1),
                      Ref('c'):ival(2)})
-  g = genexpr2(wlib, [imem])
+  g = genexpr(wlib, [imem])
   for i in range(1000):
     ref,mem,vals,w = next(g)
     expr1 = gather(ref,mem)
