@@ -1,3 +1,6 @@
 [submodule "3rdparty/dockerfiles"]
 	path = 3rdparty/dockerfiles
 	url = https://github.com/icfpcontest2020/dockerfiles
+[submodule "3rdparty/pylightnix"]
+	path = 3rdparty/pylightnix
+	url = https://github.com/stagedml/pylightnix
