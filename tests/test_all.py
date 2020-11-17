@@ -1,10 +1,10 @@
-from galang.interp import interp, IVal, IExpr, IMem
+from galang.interp import interp, IVal, IExpr, IMem, IVal, IAp, IError, ILam
 from galang.edsl import let_, let, num, intrin, call, ref, num, lam, ap
 from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, permute, WLib, mkwlib
 from galang.types import MethodName, TMap, Dict, mkmap, Ref, Mem
 from galang.utils import refs, print_expr, gather
-from galang.ser import json2t, t2json
+from galang.ser import json2t, t2json, iexpr2json, json2iexpr
 
 from hypothesis import given, assume, example, note, settings, event, HealthCheck
 from hypothesis.strategies import (text, decimals, integers, characters,
@@ -98,7 +98,7 @@ def test_genexpr()->None:
     print(print_expr(expr),iexpr)
 
 
-def test_serjson():
+def test_serexpr():
   wlib = mkwlib(lib_arith, 5)
   imem:IMem = mkmap({Ref('a'):ival(0),
                      Ref('b'):ival(1),
@@ -112,6 +112,12 @@ def test_serjson():
     print(print_expr(expr2))
     assert expr1==expr2
 
-
+def test_seriexpr():
+  def _test(ie):
+    assert ie == json2iexpr(iexpr2json(ie))
+  _test(IVal(33))
+  _test(IVal("foo"))
+  _test(IError("the message"))
+  _test(IAp(ILam("pat", intrin(MethodName('neg'),[('a',ref('pat'))])), IVal(42)))
 
 

@@ -16,7 +16,7 @@ class IError:
 
 @dataclass(frozen=True)
 class IVal:
-  val:Union[int, str, ndarray]
+  val:Union[int, str]
 
 @dataclass(frozen=True)
 class IAp:
