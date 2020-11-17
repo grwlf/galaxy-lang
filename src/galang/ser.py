@@ -1,7 +1,7 @@
 from galang.types import (Expr, Ref, TMap, Intrin, Lam, Val, Const, Ap, Let,
                           Mem, MethodName)
 from galang.edsl import num, ref, let_, lam, ap, lam, intrin
-from galang.interp import IMem, IExpr, IAp, ILam, IError, IVal
+from galang.interp import IMem, IExpr, IAp, ILam, IError, IVal, IMem
 
 from typing import List
 from json import loads as json_loads, dumps as json_dumps
@@ -102,4 +102,15 @@ def iexpr2json(e:IExpr):
 
 def json2iexpr(j:str):
   return dict2iexpr(json_loads(j))
+
+
+def imem2dict(m:IMem)->dict:
+  return {k.name:iexpr2dict(v) for k,v in m.dict.items()}
+def dict2imem(d:dict)->IMem:
+  return IMem({Ref(k):dict2iexpr(v) for k,v in d.items()})
+def imem2json(m:IMem)->str:
+  return json_dumps(imem2dict(m))
+def json2imem(j:str)->IMem:
+  return dict2imem(json_loads(j))
+
 

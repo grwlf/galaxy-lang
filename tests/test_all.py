@@ -4,7 +4,8 @@ from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, permute, WLib, mkwlib
 from galang.types import MethodName, TMap, Dict, mkmap, Ref, Mem
 from galang.utils import refs, print_expr, gather
-from galang.ser import json2t, t2json, iexpr2json, json2iexpr
+from galang.ser import (json2t, t2json, iexpr2json, json2iexpr, json2imem,
+                        imem2json)
 
 from hypothesis import given, assume, example, note, settings, event, HealthCheck
 from hypothesis.strategies import (text, decimals, integers, characters,
@@ -119,5 +120,13 @@ def test_seriexpr():
   _test(IVal("foo"))
   _test(IError("the message"))
   _test(IAp(ILam("pat", intrin(MethodName('neg'),[('a',ref('pat'))])), IVal(42)))
+
+
+def test_serimem():
+  def _test(ie):
+    assert ie == json2imem(imem2json(ie))
+  _test(mkmap({Ref('a'):ival(0),
+               Ref('b'):ival(1),
+               Ref('c'):ival(2)}))
 
 
