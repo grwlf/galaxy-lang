@@ -4,7 +4,7 @@ from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, permute, WLib, mkwlib
 from galang.types import MethodName, TMap, Dict, mkmap, Ref, Mem
 from galang.utils import refs, print_expr, gather
-from galang.ser import (json2t, t2json, iexpr2json, json2iexpr, json2imem,
+from galang.ser import (json2expr, expr2json, iexpr2json, json2iexpr, json2imem,
                         imem2json)
 
 from hypothesis import given, assume, example, note, settings, event, HealthCheck
@@ -108,7 +108,7 @@ def test_serexpr():
   for i in range(1000):
     ref,mem,vals,w = next(g)
     expr1 = gather(ref,mem)
-    expr2 = json2t(t2json(expr1))
+    expr2 = json2expr(expr2json(expr1))
     print(print_expr(expr1))
     print(print_expr(expr2))
     assert expr1==expr2

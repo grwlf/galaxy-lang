@@ -100,6 +100,9 @@ def genexpr(wlib:WLib,
 
         if any([isinstance(x,IError) for x in acc]):
           continue
+        if isinstance(e2val,IVal) and isinstance(e2val.val, int):
+          if any([abs(e2val.val)>10000 or abs(e2val.val)<-10000 for x in acc]):
+            continue
 
         valcache[e2name] = acc
         exprcache[e2name] = e2expr

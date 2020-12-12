@@ -6,20 +6,24 @@ from galang.interp import IMem, IExpr, IAp, ILam, IError, IVal, IMem
 from typing import List
 from json import loads as json_loads, dumps as json_dumps
 
-def ts2json(es:List[Expr])->str:
-  return json_dumps([t2dict(e) for e in es])
+def exprs2list(es:List[Expr])->list:
+  return [expr2dict(e) for e in es]
+def list2exprs(l:list)->List[Expr]:
+  return [dict2expr(d) for d in l]
 
-def json2ts(j:str)->List[Expr]:
-  return [dict2t(x) for x in json_loads(j)]
+def exprs2json(es:List[Expr])->str:
+  return json_dumps(exprs2list(es))
+def json2exprs(j:str)->List[Expr]:
+  return list2exprs(json_loads(j))
 
 
-def t2json(e:Expr)->str:
-  return json_dumps(t2dict(e))
+def expr2json(e:Expr)->str:
+  return json_dumps(expr2dict(e))
 
-def json2t(j:str)->Expr:
-  return dict2t(json_loads(j))
+def json2expr(j:str)->Expr:
+  return dict2expr(json_loads(j))
 
-def t2dict(e:Expr)->dict:
+def expr2dict(e:Expr)->dict:
   if isinstance(e, Val):
     if isinstance(e.val, Const):
       return {'t':'val', 'val':{'t':'const', 'val':e.val.const}}
@@ -28,18 +32,18 @@ def t2dict(e:Expr)->dict:
     else:
       raise ValueError(f"Invalid value expression {e}")
   elif isinstance(e, Lam):
-    return {'t':'lam', 'name':e.name, 'body':t2dict(e.body)}
+    return {'t':'lam', 'name':e.name, 'body':expr2dict(e.body)}
   elif isinstance(e, Let):
-    return {'t':'let', 'ref':e.ref.name, 'expr':t2dict(e.expr), 'body':t2dict(e.body)}
+    return {'t':'let', 'ref':e.ref.name, 'expr':expr2dict(e.expr), 'body':expr2dict(e.body)}
   elif isinstance(e, Ap):
-    return {'t':'ap', 'func':t2dict(e.func), 'arg':t2dict(e.arg)}
+    return {'t':'ap', 'func':expr2dict(e.func), 'arg':expr2dict(e.arg)}
   elif isinstance(e, Intrin):
-    return {'t':'intrin', 'name':e.name.val, 'args':[(n,t2dict(a)) for n,a in e.args.dict.items()]}
+    return {'t':'intrin', 'name':e.name.val, 'args':[(n,expr2dict(a)) for n,a in e.args.dict.items()]}
   else:
     raise ValueError(f"Invalid expression {e}")
 
 
-def dict2t(j:dict)->Expr:
+def dict2expr(j:dict)->Expr:
   typ = j['t']
   if typ == 'val':
     vtyp = j['val']['t']
@@ -50,13 +54,13 @@ def dict2t(j:dict)->Expr:
     else:
       raise ValueError(f"Invalid value expression {j}")
   elif typ=='lam':
-    return lam(j['name'], lambda _: dict2t(j['body']))
+    return lam(j['name'], lambda _: dict2expr(j['body']))
   elif typ=='let':
-    return let_(j['ref'], dict2t(j['expr']), lambda _: dict2t(j['body']))
+    return let_(j['ref'], dict2expr(j['expr']), lambda _: dict2expr(j['body']))
   elif typ=='ap':
-    return ap(dict2t(j['func']), dict2t(j['arg']))
+    return ap(dict2expr(j['func']), dict2expr(j['arg']))
   elif typ=='intrin':
-    return intrin(MethodName(j['name']), [(k,dict2t(v)) for k,v in j['args']])
+    return intrin(MethodName(j['name']), [(k,dict2expr(v)) for k,v in j['args']])
   else:
     raise ValueError(f"Invalid expression {j}")
 
@@ -72,7 +76,7 @@ def iexpr2dict(e:IExpr)->dict:
   elif isinstance(e, IAp):
     return {'t':'iap', 'func':iexpr2dict(e.func), 'arg':iexpr2dict(e.arg)}
   elif isinstance(e,ILam):
-    return {'t':'ilam', 'name':e.name, 'body':t2dict(e.body)}
+    return {'t':'ilam', 'name':e.name, 'body':expr2dict(e.body)}
   elif isinstance(e,IError):
     return {'t':'ierror', 'msg':e.msg}
   else:
@@ -89,7 +93,7 @@ def dict2iexpr(j:dict)->IExpr:
     else:
       raise ValueError(f"Invalid value expression {j}")
   elif typ=='ilam':
-    return ILam(j['name'], dict2t(j['body']))
+    return ILam(j['name'], dict2expr(j['body']))
   elif typ=='iap':
     return IAp(dict2iexpr(j['func']), dict2iexpr(j['arg']))
   elif typ=='ierror':
