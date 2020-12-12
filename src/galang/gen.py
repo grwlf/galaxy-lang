@@ -50,12 +50,14 @@ OpFilter=Dict[MethodName, Callable[[Expr,List[IExpr]],bool]]
 def genexpr(wlib:WLib,
             inputs:List[IMem]
             )->Iterator[Tuple[Ref,TMap[Ref,Expr],List[IExpr],int]]:
-  """ Iterate over lambda-expression with `len(inputs)` arguments
+  """ Iterate over space of lambda-expressions with `len(inputs[0])` input
+  arguments. For every expression visited, provide results of
+  it's evaluation on every input of the `intputs` list.
 
   Arguments:
   * `wlib`: Weighted library of primitive operations. See also `mkwlib`.
   * `inputs`: Collection of the inputs on which to grow the expression. All
-    inputs should be of the same size and use same names.
+    inputs in list should be of the same size and use same names.
 
   Yields a tuple of:
   * Top-level reference `Ref`
@@ -86,16 +88,19 @@ def genexpr(wlib:WLib,
       w = libws[op.name]
       nargs = len(op.argnames)
       vws:List[Tuple[Ref,int]] = list(exprw.items())
-      for valindices in permute(weights=[a[1] for a in vws], nargs=nargs, target_weight=W-w):
+      for valindices in permute(weights=[a[1] for a in vws],
+                                nargs=nargs, target_weight=W-w):
         argrefs:List[Ref] = [vws[i][0] for i in valindices]
         assert len(op.argnames)==len(argrefs)
         e2name = Ref(mkname('val'))
-        e2expr = intrin(op.name, [(nm,Val(ai)) for nm,ai in zip(op.argnames, argrefs)])
+        e2expr = intrin(op.name, [(nm,Val(ai))
+                                  for nm,ai in zip(op.argnames, argrefs)])
 
         # TODO: Make this block customizable via callbacks
         acc:List[IExpr] = []
         for b in range(nbatch):
-          e2val,_ = interp(e2expr, TMap(lib), TMap({nm:valcache[nm][b] for nm in argrefs}))
+          e2val,_ = interp(e2expr, TMap(lib), TMap({nm:valcache[nm][b]
+                                                    for nm in argrefs}))
           acc.append(e2val)
 
         if any([isinstance(x,IError) for x in acc]):
