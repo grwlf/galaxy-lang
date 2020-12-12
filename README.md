@@ -7,7 +7,18 @@ A playground for [#program-synthesis](https://paperswithcode.com/task/program-sy
 [TF-Coder's Synthesis Algorithm](https://paperswithcode.com/paper/tf-coder-program-synthesis-for-tensor)
 
 
-### References
+Usage
+-----
+
+0. Install Nix package manager
+1. Type `nix-shell` to enter development shell
+2. Compile Protobuf wrappers `protoc src/galang/sertlv.proto --python_out=.`
+3. Run `./ipython.sh` helper to run IPython
+4. ... (work is in progress)
+
+
+References
+----------
 
 Papers:
 
