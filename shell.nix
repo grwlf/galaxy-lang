@@ -95,6 +95,9 @@ let
       frozenordereddict
 
       pytorch
+
+      protobuf
+      # mypy-protobuf Doesn't work
     ]);
 
     shellHook = with pkgs; ''
