@@ -5,6 +5,7 @@ The playground for [#program-synthesis](https://paperswithcode.com/task/program-
 
 * [src/galang/gen.py](./src/galang/gen.py) contains simplified implementation of
 [TF-Coder's Synthesis Algorithm](https://paperswithcode.com/paper/tf-coder-program-synthesis-for-tensor)
+* [TF-Coder at OpenReview](https://openreview.net/forum?id=nJ5Ij53umw2)
 
 Tools for literate programming:
 

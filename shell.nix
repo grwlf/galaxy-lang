@@ -5,7 +5,7 @@
 let
 
   self = pkgs.python37Packages;
-  inherit (pkgs) fetchgit fetchFromGitHub;
+  inherit (pkgs) fetchurl fetchgit fetchFromGitHub;
   inherit (self) buildPythonPackage fetchPypi;
 
   pyls = self.python-language-server.override { providers=["pycodestyle"]; };
@@ -37,6 +37,29 @@ let
     };
   };
 
+  i686_NIX_GCC = pkgs.pkgsi686Linux.callPackage ({gcc}: gcc) {};
+
+  ld32 =
+    if stdenv.hostPlatform.system == "x86_64-linux" then "${stdenv.cc}/nix-support/dynamic-linker-m32"
+    else if stdenv.hostPlatform.system == "i686-linux" then "${stdenv.cc}/nix-support/dynamic-linker"
+    else throw "Unsupported platform for PlayOnLinux: ${stdenv.hostPlatform.system}";
+
+  lepton = stdenv.mkDerivation rec {
+    name = "lepton";
+    src = fetchurl {
+      inherit name;
+      url = "http://www.math.univ-paris13.fr/~lithiao/ResearchLepton/send.php?file=lepton";
+      sha256 = "sha256:1w2s1y5dzjxirasxb8y24dy03ag6rzasbm4vijldj1xhjs088zcd";
+    };
+    buildCommand = ''
+      set -x
+      mkdir -pv $out/bin
+      cp -v $src $out/bin/lepton
+      chmod 755 $out/bin/*
+      patchelf --interpreter "$(cat ${i686_NIX_GCC}/nix-support/dynamic-linker)" $out/bin/lepton
+    '';
+  };
+
   be = pkgs.mkShell {
     name = "pythonshell";
     buildInputs =
@@ -47,6 +70,11 @@ let
     ( with pkgs;
       with self;
     [
+      lepton
+      ocaml  # to test lepton
+      strace
+      gdb
+
       ipython
       # yapf
       # rope
