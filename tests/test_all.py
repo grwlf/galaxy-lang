@@ -6,6 +6,7 @@ from galang.types import MethodName, TMap, Dict, mkmap, Ref, Mem
 from galang.utils import refs, print_expr, gather
 from galang.ser import (jstr2expr, expr2jstr, iexpr2jstr, jstr2iexpr, jstr2imem,
                         imem2jstr)
+from galang.sertlv import (expr2tlv, tlv2expr)
 
 from hypothesis import given, assume, example, note, settings, event, HealthCheck
 from hypothesis.strategies import (text, decimals, integers, characters,
@@ -128,5 +129,16 @@ def test_serimem():
   _test(mkmap({Ref('a'):ival(0),
                Ref('b'):ival(1),
                Ref('c'):ival(2)}))
+
+
+def test_sertlv():
+  def _test(ie):
+    assert ie == tlv2expr(expr2tlv(ie))
+  _test(num(33))
+  _test(ref('a'))
+  _test(lam('b',lambda x:num(44)))
+  _test(let_('a', num(33), lambda x: x))
+  _test(ap(ref('a'),ref('b')))
+  _test(intrin(MethodName('add'),[('a',num(1)),('b',ref('x'))]))
 
 

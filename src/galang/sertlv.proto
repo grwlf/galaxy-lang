@@ -1,21 +1,25 @@
 syntax = "proto3";
 
-enum Tag {
-  // Expr
-  val = 0;
-  lam = 1;
-  let = 2;
-  ap = 3;
-  intrin = 4;
-
-  // IExpr
-  iap = 5;
-  ilam = 6;
-  ierror = 7;
-  ival = 8;
-}
-
 message Node {
+  enum Tag {
+    unknown = 0;
+
+    // Expr
+    val = 100;
+    lam = 101;
+    let = 102;
+    ap = 103;
+    intrin = 104;
+    const = 105;
+    ref = 106;
+
+    // IExpr
+    iap = 200;
+    ilam = 201;
+    ierror = 202;
+    ival = 203;
+  }
+
   Tag tag = 1;
   Value value = 2;
 }
@@ -23,9 +27,20 @@ message Node {
 message Value {
   oneof OneOf {
     Node node = 1;
-    string str = 2;
-    int64 int = 3;
+    string string = 2;
+    int64 int64 = 3;
     double double = 4;
     bool bool = 5;
+    Tuple tuple = 6;
+    List list = 7;
   }
+}
+
+message Tuple {
+  Value v1 = 1;
+  Value v2 = 2;
+}
+
+message List {
+  repeated Value list = 1;
 }
