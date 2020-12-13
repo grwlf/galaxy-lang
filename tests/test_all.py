@@ -6,7 +6,8 @@ from galang.types import MethodName, TMap, Dict, mkmap, Ref, Mem
 from galang.utils import refs, print_expr, gather
 from galang.ser import (jstr2expr, expr2jstr, iexpr2jstr, jstr2iexpr, jstr2imem,
                         imem2jstr)
-from galang.sertlv import (expr2tlv, tlv2expr, iexpr2tlv, tlv2iexpr)
+from galang.sertlv import (expr2tlv, tlv2expr, iexpr2tlv, tlv2iexpr, tlv2imem,
+                           imem2tlv)
 
 from hypothesis import given, assume, example, note, settings, event, HealthCheck
 from hypothesis.strategies import (text, decimals, integers, characters,
@@ -135,6 +136,7 @@ def test_seriexpr():
 
 def test_serimem():
   def _test(ie):
+    assert ie == tlv2imem(imem2tlv(ie))
     assert ie == jstr2imem(imem2jstr(ie))
   _test(mkmap({Ref('a'):ival(0),
                Ref('b'):ival(1),

@@ -18,6 +18,9 @@ enum Tag {
   ilam = 201;
   ierror = 202;
   ival = 203;
+
+  // IMem
+  imem = 300;
 }
 
 message Node {

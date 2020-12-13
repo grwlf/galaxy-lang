@@ -149,3 +149,14 @@ def tlv2iexpr(j:TLV)->IExpr:
   else:
     raise ValueError(f"Invalid expression {_flat(j)}")
 
+def imem2tlv(m:IMem)->TLV:
+  return \
+    _node(pb.imem, _value([
+      _value((_value(k.name),
+              _value(iexpr2tlv(v)))) for k,v in m.dict.items()]))
+
+def tlv2imem(d:TLV)->IMem:
+  assert d.tag == pb.imem
+  return IMem({Ref(i.tuple.v1.string):tlv2iexpr(i.tuple.v2.node)
+               for i in d.value.list.list})
+
