@@ -1,5 +1,5 @@
 from sys import maxsize
-from galang.interp import Lib, LibEntry, IVal, MethodName, TMap, IError, IExpr
+from galang.types import Lib, LibEntry, IVal, MethodName, TMap, IError, IExpr
 
 
 def _add(a,b)->IExpr:

@@ -1,7 +1,7 @@
 from galang.types import (Expr, Ref, TMap, Intrin, Lam, Val, Const, Ap, Let,
-                          Mem, MethodName)
+                          Mem, MethodName, IMem, IExpr, IAp, ILam, IError, IVal,
+                          IMem)
 from galang.edsl import num, ref, let_, lam, ap, lam, intrin
-from galang.interp import IMem, IExpr, IAp, ILam, IError, IVal, IMem
 
 from typing import List
 from json import loads as json_loads, dumps as json_dumps

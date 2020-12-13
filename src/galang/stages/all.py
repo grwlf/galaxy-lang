@@ -1,12 +1,15 @@
 from typing import List, Optional, Any, Dict, Iterable, Callable
 
-from galang.interp import interp, IVal, IExpr, IMem
+from galang.interp import interp
 from galang.edsl import let_, let, num, intrin, call, ref, num, lam, ap
 from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, permute, WLib, mkwlib
-from galang.types import MethodName, TMap, Dict, mkmap, Ref, Mem, Expr
+from galang.types import (MethodName, TMap, Dict, mkmap, Ref, Mem, Expr, IVal,
+                          IExpr, IMem, Example)
 from galang.utils import refs, print_expr, gather
 from galang.serjson import jstr2expr, expr2jstr, imem2json, json2imem
+from galang.serbin import (expr2bin, bin2expr, iexpr2bin, bin2iexpr, imem2bin,
+                           bin2imem, BIN, examples2fd, fd2examples)
 
 from pylightnix import (Build, Manager, DRef, Config, mkdrv, mkconfig,
                         match_only, build_wrapper, mklens, promise, writejson,
@@ -14,7 +17,6 @@ from pylightnix import (Build, Manager, DRef, Config, mkdrv, mkconfig,
                         store_initialize, shell)
 from random import randint
 from time import time
-
 
 def stage_inputs(m:Manager)->DRef:
   num_inputs = 4
@@ -45,8 +47,7 @@ def stage_dataset(m:Manager, ref_inputs:DRef)->DRef:
     num_inputs = mklens(ref_inputs).num_inputs.val
     batch_size = mklens(ref_inputs).batch_size.val
     inputs = mklens(ref_inputs).out_inputs.refpath
-    # out_outputs = [promise, 'outputs.json']
-    out_expressions = [promise, 'exprs.jsons']
+    out_examples = [promise, 'examples.bin']
     version = ['0']
     return locals()
   def _make(b:Build):
@@ -57,8 +58,10 @@ def stage_dataset(m:Manager, ref_inputs:DRef)->DRef:
     i = 0
     acc:List[Expr] = []
     g = genexpr(WLIB, IMEMs)
+    written_bytes = 0
     time_start = time()
-    with open(mklens(b).out_expressions.syspath,'w') as f:
+    with open(mklens(b).out_examples.syspath,'wb') as f:
+      _add=examples2fd(f)
       while time()<time_start+mklens(b).time2run_sec.val:
         ref,mem,vals,w = next(g)
         ival = vals[0]
@@ -66,9 +69,11 @@ def stage_dataset(m:Manager, ref_inputs:DRef)->DRef:
         expr = gather(ref,mem)
         acc.append(expr)
         i += 1
-        if i%1000 == 0:
-          print(f".. i {i} W {w} LAST_REF {ref} LAST_VAL {ival} .. ")
-          f.write('\n'.join([expr2jstr(e) for e in acc])+'\n')
+        for j in range(len(IMEMs)):
+          written_bytes+=_add(Example(IMEMs[j],expr,vals[j]))
+        if i%300 == 0:
+          print(f".. i {i} W {w} LAST_REF {ref} WRBYTES {written_bytes}.. ")
+
   return mkdrv(m, mkconfig(_config()), match_only(), build_wrapper(_make))
 
 

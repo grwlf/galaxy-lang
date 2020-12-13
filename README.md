@@ -28,6 +28,8 @@ Python:
 
 * [Protocol buffers docs, proto2](https://developers.google.com/protocol-buffers/)
 * [Protocol buffers docs, proto3](https://developers.google.com/protocol-buffers/docs/proto3)
+* https://www.datadoghq.com/blog/engineering/protobuf-parsing-in-python/
+* [Struct](https://docs.python.org/3/library/struct.html)
 
 Literate programming:
 

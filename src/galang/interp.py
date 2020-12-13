@@ -3,38 +3,10 @@ from dataclasses import dataclass
 from numpy import ndarray
 from copy import copy, deepcopy
 from galang.types import (Expr, Ref, Ap, Val, Const, Lam, Intrin, MethodName,
-                          TMap, Tuple, Let)
+                          TMap, Tuple, Let, IExpr, Lib, IMem, IVal, ILam)
 
 
 import numpy as np
-
-IExpr = Union['IVal', 'IAp', 'ILam', 'IError']
-
-@dataclass(frozen=True)
-class IError:
-  msg:str
-
-@dataclass(frozen=True)
-class IVal:
-  val:Union[int, str]
-
-@dataclass(frozen=True)
-class IAp:
-  func:IExpr
-  arg:IExpr
-
-@dataclass(frozen=True)
-class ILam:
-  name:str
-  body:Expr
-
-LibEntry = NamedTuple('LibEntry', [('name',MethodName),
-                                   ('argnames',List[str]),
-                                   ('impl',Callable[[Dict[str,IExpr]],IExpr])])
-
-Lib = TMap[MethodName,LibEntry]
-
-IMem = TMap[Ref,IExpr]
 
 def interp(expr:Expr, lib:Lib, m:IMem)->Tuple[IExpr,IMem]:
   if isinstance(expr, Val):

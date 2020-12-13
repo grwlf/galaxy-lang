@@ -1,6 +1,7 @@
-from galang.types import Expr, MethodName, Ref, Mem, Val, TMap, Ref
+from galang.types import (Lib, IExpr, LibEntry, IMem, IVal, IError, Expr,
+                          MethodName, Ref, Mem, Val, TMap, Ref)
 from galang.edsl import intrin, lam, let, ref, num, mkname, let_
-from galang.interp import Lib, IExpr, LibEntry, IMem, IVal, IError, interp
+from galang.interp import interp
 from galang.utils import refs
 from typing import (List, Dict, Optional, Iterable, Tuple, Set, Iterator,
                     Callable)

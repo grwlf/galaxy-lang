@@ -34,6 +34,12 @@ class TMap(Generic[M,I]):
 def mkmap(d:Optional[Dict[M,I]]=None)->TMap[M,I]:
   return TMap(d if d is not None else {})
 
+#  _____
+# | ____|_  ___ __  _ __
+# |  _| \ \/ / '_ \| '__|
+# | |___ >  <| |_) | |
+# |_____/_/\_\ .__/|_|
+#            |_|
 
 @dataclass(frozen=True, eq=True)
 class Const:
@@ -75,4 +81,58 @@ class Intrin:
 
 
 Mem = TMap[Ref,Expr]
+
+
+#  ___ _____
+# |_ _| ____|_  ___ __  _ __
+#  | ||  _| \ \/ / '_ \| '__|
+#  | || |___ >  <| |_) | |
+# |___|_____/_/\_\ .__/|_|
+#                |_|
+
+
+IExpr = Union['IVal', 'IAp', 'ILam', 'IError']
+
+@dataclass(frozen=True)
+class IError:
+  msg:str
+
+@dataclass(frozen=True)
+class IVal:
+  val:Union[int, str]
+
+@dataclass(frozen=True)
+class IAp:
+  func:IExpr
+  arg:IExpr
+
+@dataclass(frozen=True)
+class ILam:
+  name:str
+  body:Expr
+
+LibEntry = NamedTuple('LibEntry', [('name',MethodName),
+                                   ('argnames',List[str]),
+                                   ('impl',Callable[[Dict[str,IExpr]],IExpr])])
+
+Lib = TMap[MethodName,LibEntry]
+
+IMem = TMap[Ref,IExpr]
+
+
+#  _____                           _
+# | ____|_  ____ _ _ __ ___  _ __ | | ___
+# |  _| \ \/ / _` | '_ ` _ \| '_ \| |/ _ \
+# | |___ >  < (_| | | | | | | |_) | |  __/
+# |_____/_/\_\__,_|_| |_| |_| .__/|_|\___|
+#                           |_|
+
+@dataclass(frozen=True, eq=True)
+class Example:
+  inp:IMem
+  expr:Expr
+  out:IExpr
+
+
+
 

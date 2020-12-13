@@ -1,12 +1,12 @@
 
 from galang.types import (Expr, Ref, TMap, Intrin, Lam, Val, Const, Ap, Let,
-                          Mem, MethodName)
+                          Mem, MethodName, Example, IMem, IExpr, IAp, ILam,
+                          IError, IVal, IMem, Example)
 from galang.edsl import num, ref, let_, lam, ap, lam, intrin
-from galang.interp import IMem, IExpr, IAp, ILam, IError, IVal, IMem
 
 from galang.serbin_pb2 import Node, Value, Tuple as PBTuple, List as PBList
 
-from typing import List, Any
+from typing import List, Any, Callable
 from enum import IntEnum, unique
 
 BIN=Any
@@ -29,6 +29,9 @@ class Tag(IntEnum):
   ival = 203
   # IMem
   imem = 300
+  # Example
+  example = 400
+  examples = 401
 
 
 def _flat(v):
@@ -177,7 +180,54 @@ def imem2bin(m:IMem)->BIN:
 
 
 def bin2imem(d:BIN)->IMem:
-  assert d.tag == Tag.imem
+  assert d.tag == Tag.imem, f"Unexpected tag {d.tag}"
   return IMem({Ref(i.tuple.v1.string):bin2iexpr(i.tuple.v2.node)
                for i in d.value.list.list})
+
+
+def ex2bin(e:Example)->BIN:
+  return _node(Tag.example, _value((_value(imem2bin(e.inp)),
+                                    _value((_value(expr2bin(e.expr)),
+                                            _value(iexpr2bin(e.out)))))))
+
+def bin2ex(e:BIN)->Example:
+  assert e.tag==Tag.example
+  return Example(bin2imem(e.value.tuple.v1.node),
+                 bin2expr(e.value.tuple.v2.tuple.v1.node),
+                 bin2iexpr(e.value.tuple.v2.tuple.v2.node))
+
+
+from google.protobuf.internal.encoder import _VarintBytes    #type:ignore
+from google.protobuf.internal.decoder import _DecodeVarint32 #type:ignore
+
+
+def examples2fd(f)->Callable[[Example],int]:
+  def _add(e:Example)->int:
+    nwritten=0
+    example = ex2bin(e)
+    size = example.ByteSize()
+    buf=_VarintBytes(size)
+    f.write(buf)
+    nwritten+=len(buf)
+    buf=example.SerializeToString()
+    f.write(buf)
+    nwritten+=len(buf)
+    return nwritten
+  return _add
+
+
+def fd2examples(f, chunk:int=256)->Callable[[],Example]:
+  buf=bytearray()
+  def _next()->Example:
+    nonlocal buf
+    buf+=f.read(chunk)
+    msg_len,new_pos = _DecodeVarint32(buf,0)
+    buf=buf[new_pos:]
+    while len(buf)<msg_len:
+      buf+=f.read(chunk)
+    node=Node()
+    node.ParseFromString(buf[:msg_len])
+    buf=buf[msg_len:]
+    return bin2ex(node)
+  return _next
 

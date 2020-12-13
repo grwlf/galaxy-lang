@@ -1,13 +1,14 @@
-from galang.interp import interp, IVal, IExpr, IMem, IVal, IAp, IError, ILam
+from galang.interp import interp
 from galang.edsl import let_, let, num, intrin, call, ref, num, lam, ap
 from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, permute, WLib, mkwlib
-from galang.types import MethodName, TMap, Dict, mkmap, Ref, Mem
+from galang.types import (MethodName, TMap, Dict, mkmap, Ref, Mem, IVal, IExpr,
+                          IMem, IVal, IAp, IError, ILam, Example)
 from galang.utils import refs, print_expr, gather
 from galang.serjson import (jstr2expr, expr2jstr, iexpr2jstr, jstr2iexpr, jstr2imem,
                         imem2jstr)
 from galang.serbin import (expr2bin, bin2expr, iexpr2bin, bin2iexpr, bin2imem,
-                           imem2bin)
+                           imem2bin, examples2fd, fd2examples)
 
 from hypothesis import given, assume, example, note, settings, event, HealthCheck
 from hypothesis.strategies import (text, decimals, integers, characters,
@@ -141,5 +142,23 @@ def test_serimem():
   _test(mkmap({Ref('a'):ival(0),
                Ref('b'):ival(1),
                Ref('c'):ival(2)}))
+
+def test_example():
+  e=Example(inp=mkmap({Ref('a'):ival(0)}),
+            expr=ap(ref('a'),ref('b')),
+            out=IVal(33))
+
+  with open('/tmp/binfile','wb') as f:
+    add=examples2fd(f)
+    add(e)
+    add(e)
+
+  with open('/tmp/binfile','rb') as f:
+    _next=fd2examples(f)
+    n=_next()
+    assert n==e
+    n=_next()
+    assert n==e
+
 
 

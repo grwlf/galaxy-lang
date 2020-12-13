@@ -1,4 +1,4 @@
-from galang.interp import Lib, LibEntry, IVal, MethodName, TMap
+from galang.types import Lib, LibEntry, IVal, MethodName, TMap, IError, IExpr
 
 # mem:Mem = {
 #   # https://numpy.org/doc/stable/reference/generated/numpy.transpose.html#numpy.transpose
