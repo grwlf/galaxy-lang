@@ -4,10 +4,10 @@ from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, permute, WLib, mkwlib
 from galang.types import MethodName, TMap, Dict, mkmap, Ref, Mem
 from galang.utils import refs, print_expr, gather
-from galang.ser import (jstr2expr, expr2jstr, iexpr2jstr, jstr2iexpr, jstr2imem,
+from galang.serjson import (jstr2expr, expr2jstr, iexpr2jstr, jstr2iexpr, jstr2imem,
                         imem2jstr)
-from galang.sertlv import (expr2tlv, tlv2expr, iexpr2tlv, tlv2iexpr, tlv2imem,
-                           imem2tlv)
+from galang.serbin import (expr2bin, bin2expr, iexpr2bin, bin2iexpr, bin2imem,
+                           imem2bin)
 
 from hypothesis import given, assume, example, note, settings, event, HealthCheck
 from hypothesis.strategies import (text, decimals, integers, characters,
@@ -103,7 +103,7 @@ def test_genexpr()->None:
 def test_serexpr():
   def _test(ie):
     assert ie == jstr2expr(expr2jstr(ie))
-    assert ie == tlv2expr(expr2tlv(ie))
+    assert ie == bin2expr(expr2bin(ie))
   _test(num(33))
   _test(ref('a'))
   _test(lam('b',lambda x:num(44)))
@@ -122,12 +122,12 @@ def test_serexpr2():
     expr1 = gather(ref,mem)
     expr2 = jstr2expr(expr2jstr(expr1))
     assert expr1==expr2
-    expr2 = tlv2expr(expr2tlv(expr1))
+    expr2 = bin2expr(expr2bin(expr1))
     assert expr1==expr2
 
 def test_seriexpr():
   def _test(ie):
-    assert ie == tlv2iexpr(iexpr2tlv(ie))
+    assert ie == bin2iexpr(iexpr2bin(ie))
     assert ie == jstr2iexpr(iexpr2jstr(ie))
   _test(IVal(33))
   _test(IVal("foo"))
@@ -136,7 +136,7 @@ def test_seriexpr():
 
 def test_serimem():
   def _test(ie):
-    assert ie == tlv2imem(imem2tlv(ie))
+    assert ie == bin2imem(imem2bin(ie))
     assert ie == jstr2imem(imem2jstr(ie))
   _test(mkmap({Ref('a'):ival(0),
                Ref('b'):ival(1),

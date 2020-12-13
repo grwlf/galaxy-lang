@@ -1,30 +1,7 @@
 syntax = "proto3";
 
-// TODO: move to application
-enum Tag {
-  unknown = 0;
-
-  // Expr
-  val = 100;
-  lam = 101;
-  let = 102;
-  ap = 103;
-  intrin = 104;
-  const = 105;
-  ref = 106;
-
-  // IExpr
-  iap = 200;
-  ilam = 201;
-  ierror = 202;
-  ival = 203;
-
-  // IMem
-  imem = 300;
-}
-
 message Node {
-  Tag tag = 1;
+  int64 tag = 1;
   Value value = 2;
 }
 

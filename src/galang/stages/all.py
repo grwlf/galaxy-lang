@@ -6,7 +6,7 @@ from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, permute, WLib, mkwlib
 from galang.types import MethodName, TMap, Dict, mkmap, Ref, Mem, Expr
 from galang.utils import refs, print_expr, gather
-from galang.ser import jstr2expr, expr2jstr, imem2json, json2imem
+from galang.serjson import jstr2expr, expr2jstr, imem2json, json2imem
 
 from pylightnix import (Build, Manager, DRef, Config, mkdrv, mkconfig,
                         match_only, build_wrapper, mklens, promise, writejson,

@@ -4,20 +4,39 @@ from galang.types import (Expr, Ref, TMap, Intrin, Lam, Val, Const, Ap, Let,
 from galang.edsl import num, ref, let_, lam, ap, lam, intrin
 from galang.interp import IMem, IExpr, IAp, ILam, IError, IVal, IMem
 
-
-import galang.sertlv_pb2 as pb
-from galang.sertlv_pb2 import Node, Value, Tuple as PBTuple, List as PBList
+from galang.serbin_pb2 import Node, Value, Tuple as PBTuple, List as PBList
 
 from typing import List, Any
+from enum import IntEnum, unique
 
-TLV=Any
+BIN=Any
+
+@unique
+class Tag(IntEnum):
+  unknown = 0
+  # Expr
+  val = 100
+  lam = 101
+  let = 102
+  ap = 103
+  intrin = 104
+  const = 105
+  ref = 106
+  # IExpr
+  iap = 200
+  ilam = 201
+  ierror = 202
+  ival = 203
+  # IMem
+  imem = 300
+
 
 def _flat(v):
   return ' '.join(str(v).split())
 
 def _node(tag, value):
   n=Node()
-  n.tag = tag
+  n.tag = int(tag)
   n.value.CopyFrom(value)
   return n
 
@@ -56,107 +75,109 @@ def _value(v):
     raise ValueError(f"Invalid value's ({_flat(v)}) type: {str(type(v))}")
   return value
 
-def expr2tlv(e:Expr)->TLV:
+def expr2bin(e:Expr)->BIN:
   if isinstance(e, Val):
     if isinstance(e.val, Const):
-      return _node(pb.val, _value(_node(pb.const, _value(e.val.const))))
+      return _node(Tag.val, _value(_node(Tag.const, _value(e.val.const))))
     elif isinstance(e.val, Ref):
-      return _node(pb.val, _value(_node(pb.ref, _value(e.val.name))))
+      return _node(Tag.val, _value(_node(Tag.ref, _value(e.val.name))))
     else:
       raise ValueError(f"Invalid value expression {e}")
   elif isinstance(e, Lam):
-    return _node(pb.lam, _value((_value(e.name),
-                                   _value(expr2tlv(e.body)))))
+    return _node(Tag.lam, _value((_value(e.name),
+                                   _value(expr2bin(e.body)))))
   elif isinstance(e, Let):
-    return _node(pb.let, _value((_value(e.ref.name),
-                                   _value((_value(expr2tlv(e.expr)),
-                                           _value(expr2tlv(e.body)))))))
+    return _node(Tag.let, _value((_value(e.ref.name),
+                                   _value((_value(expr2bin(e.expr)),
+                                           _value(expr2bin(e.body)))))))
   elif isinstance(e, Ap):
-    return _node(pb.ap, _value((_value(expr2tlv(e.func)),
-                                  _value(expr2tlv(e.arg)))))
+    return _node(Tag.ap, _value((_value(expr2bin(e.func)),
+                                  _value(expr2bin(e.arg)))))
   elif isinstance(e, Intrin):
-    return _node(pb.intrin, _value((_value(e.name.val),
+    return _node(Tag.intrin, _value((_value(e.name.val),
                                       _value([_value((_value(n),
-                                                      _value(expr2tlv(a))))
+                                                      _value(expr2bin(a))))
                                              for n,a in e.args.dict.items()]))))
   else:
     raise ValueError(f"Invalid expression {e}")
 
-def tlv2expr(j:TLV)->Expr:
+def bin2expr(j:BIN)->Expr:
   typ = j.tag
-  if typ == pb.val:
+  if typ == Tag.val:
     vtyp = j.value.node.tag
-    if vtyp == pb.const:
+    if vtyp == Tag.const:
       return num(j.value.node.value.int64)
-    elif vtyp == pb.ref:
+    elif vtyp == Tag.ref:
       return ref(j.value.node.value.string)
     else:
       raise ValueError(f"Invalid value expression {_flat(j)}")
-  elif typ==pb.lam:
-    return lam(j.value.tuple.v1.string, lambda _: tlv2expr(j.value.tuple.v2.node))
-  elif typ==pb.let:
+  elif typ==Tag.lam:
+    return lam(j.value.tuple.v1.string, lambda _: bin2expr(j.value.tuple.v2.node))
+  elif typ==Tag.let:
     return let_(j.value.tuple.v1.string,
-                          tlv2expr(j.value.tuple.v2.tuple.v1.node),
-                lambda _: tlv2expr(j.value.tuple.v2.tuple.v2.node))
-  elif typ==pb.ap:
-    return ap(tlv2expr(j.value.tuple.v1.node),
-              tlv2expr(j.value.tuple.v2.node))
-  elif typ==pb.intrin:
+                          bin2expr(j.value.tuple.v2.tuple.v1.node),
+                lambda _: bin2expr(j.value.tuple.v2.tuple.v2.node))
+  elif typ==Tag.ap:
+    return ap(bin2expr(j.value.tuple.v1.node),
+              bin2expr(j.value.tuple.v2.node))
+  elif typ==Tag.intrin:
     return intrin(MethodName(j.value.tuple.v1.string),
                   [(         v.tuple.v1.string,
-                    tlv2expr(v.tuple.v2.node)) for v in j.value.tuple.v2.list.list])
+                    bin2expr(v.tuple.v2.node)) for v in j.value.tuple.v2.list.list])
   else:
     raise ValueError(f"Invalid expression {_flat(j)}")
 
 
-def iexpr2tlv(e:IExpr)->dict:
+def iexpr2bin(e:IExpr)->dict:
   if isinstance(e, IVal):
     if isinstance(e.val, int):
-      return _node(pb.ival, _value(int(e.val)))
+      return _node(Tag.ival, _value(int(e.val)))
     elif isinstance(e.val, str):
-      return _node(pb.ival, _value(str(e.val)))
+      return _node(Tag.ival, _value(str(e.val)))
     else:
       raise ValueError(f"Invalid value {e}")
     pass
   elif isinstance(e, IAp):
-    return _node(pb.iap, _value((_value(iexpr2tlv(e.func)),
-                                 _value(iexpr2tlv(e.arg)))))
+    return _node(Tag.iap, _value((_value(iexpr2bin(e.func)),
+                                 _value(iexpr2bin(e.arg)))))
   elif isinstance(e,ILam):
-    return _node(pb.ilam, _value((_value(e.name),
-                                  _value(expr2tlv(e.body)))))
+    return _node(Tag.ilam, _value((_value(e.name),
+                                  _value(expr2bin(e.body)))))
   elif isinstance(e,IError):
-    return _node(pb.ierror, _value(str(e.msg)))
+    return _node(Tag.ierror, _value(str(e.msg)))
   else:
     raise ValueError(f"Invalid expression {e}")
 
 
-def tlv2iexpr(j:TLV)->IExpr:
-  if j.tag == pb.ival:
+def bin2iexpr(j:BIN)->IExpr:
+  if j.tag == Tag.ival:
     if j.value.HasField('int64'):
       return IVal(int(j.value.int64))
     elif j.value.HasField('string'):
       return IVal(str(j.value.string))
     else:
       raise ValueError(f"Invalid value expression {j}")
-  elif j.tag==pb.ilam:
+  elif j.tag==Tag.ilam:
     return ILam(         j.value.tuple.v1.string,
-                tlv2expr(j.value.tuple.v2.node))
-  elif j.tag==pb.iap:
-    return IAp(tlv2iexpr(j.value.tuple.v1.node),
-               tlv2iexpr(j.value.tuple.v2.node))
-  elif j.tag==pb.ierror:
+                bin2expr(j.value.tuple.v2.node))
+  elif j.tag==Tag.iap:
+    return IAp(bin2iexpr(j.value.tuple.v1.node),
+               bin2iexpr(j.value.tuple.v2.node))
+  elif j.tag==Tag.ierror:
     return IError(j.value.string)
   else:
     raise ValueError(f"Invalid expression {_flat(j)}")
 
-def imem2tlv(m:IMem)->TLV:
-  return \
-    _node(pb.imem, _value([
-      _value((_value(k.name),
-              _value(iexpr2tlv(v)))) for k,v in m.dict.items()]))
 
-def tlv2imem(d:TLV)->IMem:
-  assert d.tag == pb.imem
-  return IMem({Ref(i.tuple.v1.string):tlv2iexpr(i.tuple.v2.node)
+def imem2bin(m:IMem)->BIN:
+  return \
+    _node(Tag.imem, _value([
+      _value((_value(k.name),
+              _value(iexpr2bin(v)))) for k,v in m.dict.items()]))
+
+
+def bin2imem(d:BIN)->IMem:
+  assert d.tag == Tag.imem
+  return IMem({Ref(i.tuple.v1.string):bin2iexpr(i.tuple.v2.node)
                for i in d.value.list.list})
 
