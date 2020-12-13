@@ -6,7 +6,7 @@ from galang.types import MethodName, TMap, Dict, mkmap, Ref, Mem
 from galang.utils import refs, print_expr, gather
 from galang.ser import (jstr2expr, expr2jstr, iexpr2jstr, jstr2iexpr, jstr2imem,
                         imem2jstr)
-from galang.sertlv import (expr2tlv, tlv2expr)
+from galang.sertlv import (expr2tlv, tlv2expr, iexpr2tlv, tlv2iexpr)
 
 from hypothesis import given, assume, example, note, settings, event, HealthCheck
 from hypothesis.strategies import (text, decimals, integers, characters,
@@ -99,8 +99,18 @@ def test_genexpr()->None:
     assert iexpr==vals[0]
     print(print_expr(expr),iexpr)
 
-
 def test_serexpr():
+  def _test(ie):
+    assert ie == jstr2expr(expr2jstr(ie))
+    assert ie == tlv2expr(expr2tlv(ie))
+  _test(num(33))
+  _test(ref('a'))
+  _test(lam('b',lambda x:num(44)))
+  _test(let_('a', num(33), lambda x: x))
+  _test(ap(ref('a'),ref('b')))
+  _test(intrin(MethodName('add'),[('a',num(1)),('b',ref('x'))]))
+
+def test_serexpr2():
   wlib = mkwlib(lib_arith, 5)
   imem:IMem = mkmap({Ref('a'):ival(0),
                      Ref('b'):ival(1),
@@ -110,18 +120,18 @@ def test_serexpr():
     ref,mem,vals,w = next(g)
     expr1 = gather(ref,mem)
     expr2 = jstr2expr(expr2jstr(expr1))
-    print(print_expr(expr1))
-    print(print_expr(expr2))
+    assert expr1==expr2
+    expr2 = tlv2expr(expr2tlv(expr1))
     assert expr1==expr2
 
 def test_seriexpr():
   def _test(ie):
+    assert ie == tlv2iexpr(iexpr2tlv(ie))
     assert ie == jstr2iexpr(iexpr2jstr(ie))
   _test(IVal(33))
   _test(IVal("foo"))
-  _test(IError("the message"))
   _test(IAp(ILam("pat", intrin(MethodName('neg'),[('a',ref('pat'))])), IVal(42)))
-
+  _test(IError("the message"))
 
 def test_serimem():
   def _test(ie):
@@ -129,16 +139,5 @@ def test_serimem():
   _test(mkmap({Ref('a'):ival(0),
                Ref('b'):ival(1),
                Ref('c'):ival(2)}))
-
-
-def test_sertlv():
-  def _test(ie):
-    assert ie == tlv2expr(expr2tlv(ie))
-  _test(num(33))
-  _test(ref('a'))
-  _test(lam('b',lambda x:num(44)))
-  _test(let_('a', num(33), lambda x: x))
-  _test(ap(ref('a'),ref('b')))
-  _test(intrin(MethodName('add'),[('a',num(1)),('b',ref('x'))]))
 
 

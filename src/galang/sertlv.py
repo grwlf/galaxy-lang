@@ -109,4 +109,43 @@ def tlv2expr(j:TLV)->Expr:
     raise ValueError(f"Invalid expression {_flat(j)}")
 
 
+def iexpr2tlv(e:IExpr)->dict:
+  if isinstance(e, IVal):
+    if isinstance(e.val, int):
+      return _node(pb.ival, _value(int(e.val)))
+    elif isinstance(e.val, str):
+      return _node(pb.ival, _value(str(e.val)))
+    else:
+      raise ValueError(f"Invalid value {e}")
+    pass
+  elif isinstance(e, IAp):
+    return _node(pb.iap, _value((_value(iexpr2tlv(e.func)),
+                                 _value(iexpr2tlv(e.arg)))))
+  elif isinstance(e,ILam):
+    return _node(pb.ilam, _value((_value(e.name),
+                                  _value(expr2tlv(e.body)))))
+  elif isinstance(e,IError):
+    return _node(pb.ierror, _value(str(e.msg)))
+  else:
+    raise ValueError(f"Invalid expression {e}")
+
+
+def tlv2iexpr(j:TLV)->IExpr:
+  if j.tag == pb.ival:
+    if j.value.HasField('int64'):
+      return IVal(int(j.value.int64))
+    elif j.value.HasField('string'):
+      return IVal(str(j.value.string))
+    else:
+      raise ValueError(f"Invalid value expression {j}")
+  elif j.tag==pb.ilam:
+    return ILam(         j.value.tuple.v1.string,
+                tlv2expr(j.value.tuple.v2.node))
+  elif j.tag==pb.iap:
+    return IAp(tlv2iexpr(j.value.tuple.v1.node),
+               tlv2iexpr(j.value.tuple.v2.node))
+  elif j.tag==pb.ierror:
+    return IError(j.value.string)
+  else:
+    raise ValueError(f"Invalid expression {_flat(j)}")
 
