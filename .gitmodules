@@ -4,3 +4,6 @@
 [submodule "3rdparty/pylightnix"]
 	path = 3rdparty/pylightnix
 	url = https://github.com/stagedml/pylightnix
+[submodule "3rdparty/nixpkgs"]
+	path = 3rdparty/nixpkgs
+	url = https://github.com/nixos/nixpkgs
