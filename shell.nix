@@ -1,5 +1,6 @@
 #{ pkgs ?  import ./lib/nixpkgs {}
-{ pkgs ?  import <nixpkgs> {}
+# { pkgs ?  import <nixpkgs> {}
+{ pkgs ?  import ./3rdparty/nixpkgs {}
 , stdenv ? pkgs.stdenv
 } :
 let
@@ -35,6 +36,42 @@ let
       rev = "706ee10cd4a426dbbebbe2246a23172aebb5691f";
       sha256 = "sha256:1dlrlvb4b9y1lmbqfsmzg854aap94gdsi63mcy3iqqdfir3zr8ym";
     };
+  };
+
+  altair-data-server = buildPythonPackage rec {
+    name = "altair-data-server";
+    src = fetchPypi {
+      version = "0.4.1";
+      pname = "altair_data_server";
+      sha256 = "sha256:0azbkakgbjwxvkfsvdcw2vnpjn44ffwrqwsqzhh80rxjiaj0b4mk";
+    };
+    buildInputs = with self; [ altair portpicker tornado jinja2 pytest ];
+  };
+
+  altair-viewer = buildPythonPackage rec {
+    name = "altair-viewer";
+    src = fetchPypi {
+      version = "0.3.0";
+      pname = "altair_viewer";
+      sha256 = "sha256:0fa4ab233jbx11jfim35qys9yz769pdhkmfrvliyfnvwdggdnr19";
+    };
+    buildInputs = with self; [ altair altair-data-server portpicker tornado
+                               jinja2 pytest ipython ];
+  };
+
+  altair-saver = buildPythonPackage rec {
+    name = "altair-saver";
+    src = fetchPypi {
+      version = "0.5.0";
+      pname = "altair_saver";
+      sha256 = "sha256:15c7p23m8497jpvabg49bd858nsip31lv408n4fs2fwfhvvbr660";
+    };
+    # preConfigure = ''
+    #   sed -i 's/selenium//g' requirements.txt
+    # '';
+    propagatedBuildInputs = with self; [ altair-viewer pkgs.nodejs altair-data-server
+      altair portpicker tornado jinja2 pytest selenium
+      pillow pypdf2];
   };
 
   i686_NIX_GCC = pkgs.pkgsi686Linux.callPackage ({gcc}: gcc) {};
@@ -98,6 +135,13 @@ let
 
       protobuf
       # mypy-protobuf Doesn't work
+      altair
+      altair-data-server
+      altair-viewer
+      altair-saver
+
+      nodePackages.vega-lite
+      nodePackages.vega-cli
     ]);
 
     shellHook = with pkgs; ''
