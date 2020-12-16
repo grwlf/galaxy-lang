@@ -1,0 +1,14 @@
+build/
+dist/
+.*
+_*
+!__*
+*egg-info/
+*\.log
+*\.pyc
+tags
+result
+result-*
+out_html/
+docker/wheels/*
+*_pb2.py
