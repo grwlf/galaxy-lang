@@ -70,7 +70,7 @@ def stage_dataset(m:Manager, ref_inputs:DRef)->DRef:
         acc.append(expr)
         i += 1
         for j in range(len(IMEMs)):
-          written_bytes+=_add(Example(IMEMs[j],expr,vals[j]))
+          written_bytes+=_add(Example(IMEMs[j],expr,vals[j][r]))
         if i%300 == 0:
           print(f".. i {i} W {w} LAST_REF {r} WRBYTES {written_bytes}.. ")
 
