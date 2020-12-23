@@ -2,7 +2,6 @@ from galang.types import (Lib, IExpr, LibEntry, IMem, IVal, IError, Expr,
                           MethodName, Ref, Mem, Val, TMap, Ref)
 from galang.edsl import intrin, lam, let, ref, num, mkname, let_
 from galang.interp import interp
-from galang.utils import refs
 from typing import (List, Dict, Optional, Iterable, Tuple, Set, Iterator,
                     Callable)
 from collections import OrderedDict
@@ -78,14 +77,13 @@ def genexpr(wlib:WLib,
 
   exprcache:Dict[Ref,Expr]={}
   exprw:Dict[Ref,int]={k:1 for k in inputs[0].keys()}
-  valcache:Dict[Ref,List[IExpr]]={k:[i[k] for i in inputs] \
+  valcache:Dict[Ref,List[IExpr]]={k:[i[k] for i in inputs]
                                     for k in inputs[0].keys()}
 
   W = 0
   while True:
     W += 1
     for op in lib.values():
-      n = len(op.argnames)
       w = libws[op.name]
       nargs = len(op.argnames)
       vws:List[Tuple[Ref,int]] = list(exprw.items())

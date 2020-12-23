@@ -4,7 +4,7 @@ from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, permute, WLib, mkwlib
 from galang.types import (MethodName, TMap, Dict, mkmap, Ref, Mem, IVal, IExpr,
                           IMem, IVal, IAp, IError, ILam, Example)
-from galang.utils import refs, print_expr, gather
+from galang.utils import refs_, extrefs, refs, decls, print_expr, gather
 from galang.serjson import (jstr2expr, expr2jstr, iexpr2jstr, jstr2iexpr, jstr2imem,
                         imem2jstr)
 from galang.serbin import (expr2bin, bin2expr, iexpr2bin, bin2iexpr, bin2imem,
@@ -64,9 +64,9 @@ def test_refs()->None:
   e = let_('a', num(33), lambda a:
       let_('b', num(42), lambda b:
           intrin(MethodName("add"), [('a',a),('c',ref('c'))])))
-  assert refs(e)==set([Ref('a'),Ref('b'),Ref('c')])
-  assert refs(e, declarations=False)==set([Ref('a'),Ref('c')])
-  assert refs(e, references=False)==set([Ref('a'),Ref('b')])
+  assert refs_(e)==set([Ref('a'),Ref('b'),Ref('c')])
+  assert refs(e)==set([Ref('a'),Ref('c')])
+  assert decls(e)==set([Ref('a'),Ref('b')])
 
 def test_print()->None:
   assert print_expr(intrin(MethodName("add"), [('a',num(0)),('b',ref('1'))])) == "add(a=0,b=1)"
@@ -77,12 +77,13 @@ def test_gather()->None:
   mn = MethodName
   mem = Mem({
     Ref('a'): num(33),
-    Ref('b'): intrin(mn('neg'),[('a',ref('a'))]),
+    Ref('b'): intrin(mn('neg'),[('a',ref('i'))]),
     Ref('c'): intrin(mn('add'),[('a',ref('a')),('b',ref('b'))])
   })
   expr = gather(Ref('c'), mem)
-  iexpr,_ = interp(expr, lib_arith, mkmap())
-  assert iexpr == IVal(0)
+  assert extrefs(expr)==set([Ref('i')])
+  iexpr,_ = interp(expr, lib_arith, mkmap({Ref('i'):ival(32)}))
+  assert iexpr == IVal(1)
 
 def ival(n:int)->IVal:
   r,_ = interp(num(n), lib_arith, mkmap())
@@ -101,6 +102,8 @@ def test_genexpr()->None:
     iexpr,_ = interp(expr, lib_arith, imem)
     assert len(vals)==1
     assert iexpr==vals[0]
+    assert len(extrefs(expr))>0
+    assert extrefs(expr).issubset(set([Ref('a'),Ref('b'),Ref('c')]))
     print(print_expr(expr),iexpr)
 
 def test_serexpr():

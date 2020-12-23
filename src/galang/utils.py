@@ -1,9 +1,9 @@
 from galang.types import Expr, Ref, TMap, Intrin, Lam, Val, Const, Ap, Let, Mem
 from galang.edsl import let_
-from typing import List, Tuple, Dict, Union, Callable, Set, Optional
+from typing import List, Tuple, Dict, Union, Callable, Set, Optional, Iterator
 
 
-def refs(e:Expr, declarations:bool=True, references:bool=True)->Set[Ref]:
+def refs_(e:Expr, declarations:bool=True, references:bool=True)->Set[Ref]:
   """ Collect `Ref`s used by `Expr`. Could find reference declarations only or
   references uses only. """
   d,r=declarations,references
@@ -15,20 +15,30 @@ def refs(e:Expr, declarations:bool=True, references:bool=True)->Set[Ref]:
     else:
       raise ValueError(f"Invalid value expression {e}")
   elif isinstance(e, Lam):
-    return refs(e.body,d,r)
+    return refs_(e.body,d,r)
   elif isinstance(e, Let):
-    return set([e.ref] if declarations else []) | refs(e.expr,d,r) | refs(e.body,d,r)
+    return set([e.ref] if declarations else []) | refs_(e.expr,d,r) | refs_(e.body,d,r)
   elif isinstance(e, Ap):
-    return refs(e.func,d,r) | refs(e.arg,d,r)
+    return refs_(e.func,d,r) | refs_(e.arg,d,r)
   elif isinstance(e, Intrin):
     acc:Set[Ref] = set()
     for a in e.args.values():
-      acc |= refs(a,d,r)
+      acc |= refs_(a,d,r)
     return acc
   else:
     raise ValueError(f"Invalid expression {e}")
 
+def decls(e:Expr)->Set[Ref]:
+  return refs_(e, declarations=True, references=False)
+
+def refs(e:Expr)->Set[Ref]:
+  return refs_(e, declarations=False, references=True)
+
+def extrefs(e:Expr)->Set[Ref]:
+  return refs(e)-decls(e)
+
 def print_expr(e:Expr)->str:
+  """ Prints the expression """
   if isinstance(e,Val):
     if isinstance(e.val, Ref):
       return f"{e.val.name}"
@@ -47,7 +57,10 @@ def print_expr(e:Expr)->str:
   else:
     raise ValueError(f"Invalid expression '{e}'")
 
+
 def gather(top:Ref, mem:Mem)->Expr:
+  """ Re-constructs complext expression using top-level reference `top` and the
+  map of references `mem`. Return the final expression. """
   mentioned:Set[Ref] = {top}
   acc:Optional[Expr] = None
   for ref,expr in reversed(list(mem.items())):
@@ -62,6 +75,18 @@ def gather(top:Ref, mem:Mem)->Expr:
   return acc
 
 
+def gengather(top:Ref, mem:Mem)->Iterator[Expr]:
+  mentioned:Set[Ref] = {top}
+  acc:Optional[Expr] = None
+  for ref,expr in reversed(list(mem.items())):
+    if ref in mentioned:
+      mentioned |= refs(expr)
+      if acc is None:
+        acc = expr
+      else:
+        acc2:Expr = acc
+        acc = let_(ref.name, expr, lambda x: acc2)
+      yield acc
 
 
 
