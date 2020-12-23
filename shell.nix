@@ -144,6 +144,8 @@ let
       nodePackages.vega-cli
 
       feh
+
+      (texlive.override { python=pkgs.python3; }).combined.scheme-medium
     ]);
 
     shellHook = with pkgs; ''
