@@ -142,6 +142,8 @@ let
 
       nodePackages.vega-lite
       nodePackages.vega-cli
+
+      feh
     ]);
 
     shellHook = with pkgs; ''

@@ -63,16 +63,16 @@ def stage_dataset(m:Manager, ref_inputs:DRef)->DRef:
     with open(mklens(b).out_examples.syspath,'wb') as f:
       _add=examples2fd(f)
       while time()<time_start+mklens(b).time2run_sec.val:
-        ref,mem,vals,w = next(g)
+        r,mem,vals,w = next(g)
         ival = vals[0]
         assert isinstance(ival, IVal)
-        expr = gather(ref,mem)
+        expr = gather(r,mem)
         acc.append(expr)
         i += 1
         for j in range(len(IMEMs)):
           written_bytes+=_add(Example(IMEMs[j],expr,vals[j]))
         if i%300 == 0:
-          print(f".. i {i} W {w} LAST_REF {ref} WRBYTES {written_bytes}.. ")
+          print(f".. i {i} W {w} LAST_REF {r} WRBYTES {written_bytes}.. ")
 
   return mkdrv(m, mkconfig(_config()), match_only(), build_wrapper(_make))
 
