@@ -49,7 +49,7 @@ OpFilter=Dict[MethodName, Callable[[Expr,List[IExpr]],bool]]
 
 def genexpr(wlib:WLib,
             inputs:List[IMem]
-            )->Iterator[Tuple[Ref,TMap[Ref,Expr],List[IExpr],int]]:
+            )->Iterator[Tuple[Ref,TMap[Ref,Expr],List[IMem],int]]:
   """ Iterate over space of lambda-expressions with `len(inputs[0])` input
   arguments. For every expression visited, provide results of
   it's evaluation on every input of the `intputs` list.
@@ -77,8 +77,7 @@ def genexpr(wlib:WLib,
 
   exprcache:Dict[Ref,Expr]={}
   exprw:Dict[Ref,int]={k:1 for k in inputs[0].keys()}
-  valcache:Dict[Ref,List[IExpr]]={k:[i[k] for i in inputs]
-                                    for k in inputs[0].keys()}
+  valcache:List[Dict[Ref,IExpr]]=[OrderedDict(i.dict) for i in inputs]
 
   W = 0
   while True:
@@ -98,8 +97,7 @@ def genexpr(wlib:WLib,
         # TODO: Make this block customizable via callbacks
         acc:List[IExpr] = []
         for b in range(nbatch):
-          e2val,_ = interp(e2expr, TMap(lib), TMap({nm:valcache[nm][b]
-                                                    for nm in argrefs}))
+          e2val,_ = interp(e2expr, TMap(lib), TMap(valcache[b]))
           acc.append(e2val)
 
         if any([isinstance(x,IError) for x in acc]):
@@ -108,8 +106,10 @@ def genexpr(wlib:WLib,
           if any([abs(e2val.val)>10000 or abs(e2val.val)<-10000 for x in acc]):
             continue
 
-        valcache[e2name] = acc
+        for b in range(nbatch):
+          valcache[b][e2name] = acc[b]
+
         exprcache[e2name] = e2expr
         exprw[e2name] = W
-        yield (e2name,TMap(exprcache),acc,W)
+        yield (e2name,TMap(exprcache),[TMap(fd) for fd in valcache],W)
 
