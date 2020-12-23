@@ -58,13 +58,15 @@ def test_tmap()->None:
   assert _f(x[3])=='3'
   cache:Dict[TMap[int,str],bool]={}
   cache[x] = True # Check hashability
-  assert cache[x] == True
+  assert cache[x] is True
 
 def test_refs()->None:
   e = let_('a', num(33), lambda a:
       let_('b', num(42), lambda b:
-          intrin(MethodName("add"), [('a',a),('b',b)])))
-  assert refs(e)==set([Ref('a'),Ref('b')])
+          intrin(MethodName("add"), [('a',a),('c',ref('c'))])))
+  assert refs(e)==set([Ref('a'),Ref('b'),Ref('c')])
+  assert refs(e, declarations=False)==set([Ref('a'),Ref('c')])
+  assert refs(e, references=False)==set([Ref('a'),Ref('b')])
 
 def test_print()->None:
   assert print_expr(intrin(MethodName("add"), [('a',num(0)),('b',ref('1'))])) == "add(a=0,b=1)"

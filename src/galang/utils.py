@@ -3,24 +3,27 @@ from galang.edsl import let_
 from typing import List, Tuple, Dict, Union, Callable, Set, Optional
 
 
-def refs(e:Expr)->Set[Ref]:
+def refs(e:Expr, declarations:bool=True, references:bool=True)->Set[Ref]:
+  """ Collect `Ref`s used by `Expr`. Could find reference declarations only or
+  references uses only. """
+  d,r=declarations,references
   if isinstance(e, Val):
     if isinstance(e.val, Const):
       return set()
     elif isinstance(e.val, Ref):
-      return set([e.val])
+      return set([e.val] if references else [])
     else:
       raise ValueError(f"Invalid value expression {e}")
   elif isinstance(e, Lam):
-    return refs(e.body)
+    return refs(e.body,d,r)
   elif isinstance(e, Let):
-    return set([e.ref]) | refs(e.expr) | refs(e.body)
+    return set([e.ref] if declarations else []) | refs(e.expr,d,r) | refs(e.body,d,r)
   elif isinstance(e, Ap):
-    return refs(e.func) | refs(e.arg)
+    return refs(e.func,d,r) | refs(e.arg,d,r)
   elif isinstance(e, Intrin):
     acc:Set[Ref] = set()
     for a in e.args.values():
-      acc |= refs(a)
+      acc |= refs(a,d,r)
     return acc
   else:
     raise ValueError(f"Invalid expression {e}")
