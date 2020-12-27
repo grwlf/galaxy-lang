@@ -33,18 +33,18 @@ def build_dataset():
   return rref
 
 
-def analyze_examples(fpath)->DataFrame:
+def examples_dataframe(fpath:str)->DataFrame:
   print(f"Reading {fpath}")
   d:dict={'data':[], 'isin':[]}
-  def _addval(v, isin)->None:
+  def _addval(v, isin:int)->None:
     nonlocal d
     if isinstance(v,IVal) and \
        isinstance(v.val, int):
       d['data'].append(v.val)
-      d['isin'].append(1 if isin else 0)
+      d['isin'].append(isin)
     else:
       d['data'].append(None)
-      d['isin'].append(1 if isin else 0)
+      d['isin'].append(isin)
   with open(fpath,'rb') as f:
     _next=fd2examples(f)
     try:
@@ -52,8 +52,8 @@ def analyze_examples(fpath)->DataFrame:
       while True:
         example=_next()
         for k,v in example.inp.items():
-          _addval(v,True)
-        _addval(example.out,False)
+          _addval(v,isin=1)
+        _addval(example.out,isin=0)
         i+=1
     except KeyboardInterrupt:
       raise
@@ -63,18 +63,46 @@ def analyze_examples(fpath)->DataFrame:
     print(f"Number of examples: {i}")
     return DataFrame(d)
 
-def run():
+def _axis(alt_fn, col, title):
+  return alt_fn(col, axis=alt.Axis(title=title))
+
+def vis_bars(df:DataFrame, plot_fpath:str=None)->None:
+  fpath:str='_plot.png' if plot_fpath is None else plot_fpath
+
+  dfi=df[df['isin']==1].groupby(by=['data'], as_index=False) \
+                       .aggregate(cnt=pd.NamedAgg(column='isin', aggfunc='count'))
+  chi=alt.Chart(dfi).mark_bar().encode(
+    x=_axis(alt.X, 'data', 'Inputs'),
+    y=_axis(alt.Y, 'cnt', 'Count'))
+
+  dfo=df[df['isin']==0].groupby(by=['data'], as_index=False) \
+                       .aggregate(cnt=pd.NamedAgg(column='isin', aggfunc='count'))
+  Q=0.7
+  dfo=dfo[dfo['cnt']>dfo['cnt'].quantile(Q)]
+  cho=alt.Chart(dfo).mark_bar().encode(
+    x=_axis(alt.X, 'data', f'Outputs above {Q} quantile'),
+    y=_axis(alt.Y, 'cnt', 'Count'),
+    color=alt.value('red'))
+
+  altair_save(chi & cho,fpath)
+  system(f"feh {fpath}")
+  return
+
+def load():
   rref=build_dataset()
   print(mklens(rref).syspath)
-  df=analyze_examples(mklens(rref).out_examples.syspath)
+  df=examples_dataframe(mklens(rref).out_examples.syspath)
   return df
+
+def run():
+  _=load()
   # df2=df[~df['isin']].groupby(by=['data','isin'], as_index=False).count()
   # print(df2.head())
   # ch=alt.Chart(df[df['isin']==False]).mark_bar().encode(
   #     alt.X("data:Q", bin=alt.BinParams(maxbins=100)),
   #     y='count()')
-  # altair_save(ch,'plot.png')
-  # system("feh plot.png")
+  # altair_save(ch,'_plot.png')
+  # system("feh _plot.png")
   # print('Done')
 
 if __name__=='__main__':
