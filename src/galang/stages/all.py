@@ -6,7 +6,7 @@ from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, permute, WLib, mkwlib
 from galang.types import (MethodName, TMap, Dict, mkmap, Ref, Mem, Expr, IVal,
                           IExpr, IMem, Example)
-from galang.utils import refs, print_expr, gather
+from galang.utils import refs, print_expr, gather, gengather, extrefs, refs
 from galang.serjson import jstr2expr, expr2jstr, imem2json, json2imem
 from galang.serbin import (expr2bin, bin2expr, iexpr2bin, bin2iexpr, imem2bin,
                            bin2imem, BIN, examples2fd, fd2examples)
@@ -77,4 +77,45 @@ def stage_dataset(m:Manager, ref_inputs:DRef)->DRef:
   return mkdrv(m, mkconfig(_config()), match_only(), build_wrapper(_make))
 
 
+
+def stage_dataset2(m:Manager, ref_inputs:DRef)->DRef:
+  Wdef = 5
+  lib_impl = lib_arith
+  lib_methods = [mn.val for mn in lib_impl.keys()]
+  time2run_sec = int(0.5*60)
+  def _config():
+    name = 'dataset2'
+    nonlocal Wdef,lib_methods,time2run_sec
+    num_inputs = mklens(ref_inputs).num_inputs.val
+    batch_size = mklens(ref_inputs).batch_size.val
+    inputs = mklens(ref_inputs).out_inputs.refpath
+    out_examples = [promise, 'examples.bin']
+    version = ['3']
+    return locals()
+  def _make(b:Build):
+    build_setoutpaths(b, 1)
+    WLIB = mkwlib(lib_impl, Wdef)
+    IMEMs = [json2imem(j) for j in readjson(mklens(b).inputs.syspath)]
+    print(f"Inputs: {IMEMs}")
+    i = 0
+    acc:List[Expr] = []
+    g = genexpr(WLIB, IMEMs)
+    written_bytes = 0
+    time_start = time()
+    with open(mklens(b).out_examples.syspath,'wb') as f:
+      _add=examples2fd(f)
+      while time()<time_start+mklens(b).time2run_sec.val:
+        r,mem,imems,w = next(g)
+        assert isinstance(imems[0][r], IVal), f"{imems[0][r]}"
+        for expr in gengather(r,mem):
+          acc.append(expr)
+          i += 1
+          for j in range(len(IMEMs)):
+            inps = IMem({k:v for k,v in IMEMs[j].items() if k in extrefs(expr)})
+            if len(refs(expr))>1:
+              written_bytes+=_add(Example(inps,expr,imems[j][r]))
+          if i%300 == 0:
+            print(f".. i {i} W {w} LAST_REF {r} WRBYTES {written_bytes // (1024) }K .. ")
+
+  return mkdrv(m, mkconfig(_config()), match_only(), build_wrapper(_make))
 

@@ -4,7 +4,8 @@ from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, permute, WLib, mkwlib
 from galang.types import (MethodName, TMap, Dict, mkmap, Ref, Mem, IVal, IExpr,
                           IMem, IVal, IAp, IError, ILam, Example)
-from galang.utils import refs_, extrefs, refs, decls, print_expr, gather
+from galang.utils import (refs_, extrefs, refs, decls, print_expr, gather,
+                          gengather)
 from galang.serjson import (jstr2expr, expr2jstr, iexpr2jstr, jstr2iexpr, jstr2imem,
                         imem2jstr)
 from galang.serbin import (expr2bin, bin2expr, iexpr2bin, bin2iexpr, bin2imem,
@@ -84,6 +85,26 @@ def test_gather()->None:
   assert extrefs(expr)==set([Ref('i')])
   iexpr,_ = interp(expr, lib_arith, mkmap({Ref('i'):ival(32)}))
   assert iexpr == IVal(1)
+
+def test_gengather()->None:
+  mn = MethodName
+  mem = Mem({
+    Ref('a'): num(33),
+    Ref('b'): intrin(mn('neg'),[('a',ref('i'))]),
+    Ref('c'): intrin(mn('add'),[('a',ref('a')),('b',ref('b'))])
+  })
+  imem = IMem({
+    Ref('i'): IVal(32),
+    Ref('a'): IVal(33),
+    Ref('b'): IVal(-32),
+    Ref('c'): IVal(1)
+  })
+  exprs = gengather(Ref('c'), mem)
+  for e in exprs:
+    inps = IMem({k:v for k,v in imem.items() if k in extrefs(e)})
+    iexpr,_ = interp(e, lib_arith, inps)
+    print(print_expr(e), iexpr, inps.dict)
+    assert iexpr == imem[Ref('c')]
 
 def ival(n:int)->IVal:
   r,_ = interp(num(n), lib_arith, mkmap())

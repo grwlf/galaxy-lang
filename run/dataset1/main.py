@@ -10,7 +10,7 @@ from galang.types import MethodName, TMap, Dict, mkmap, Ref, Mem, Expr
 from galang.utils import refs, print_expr, gather
 
 from pylightnix import realize, instantiate, store_initialize, Manager, mklens
-from galang.stages.all import stage_inputs, stage_dataset
+from galang.stages.all import stage_inputs, stage_dataset, stage_dataset2
 from galang.serbin import fd2examples
 from pandas import DataFrame
 from os import system
@@ -22,15 +22,6 @@ import altair as alt
 alt.data_transformers.disable_max_rows()
 
 store_initialize()
-
-
-def build_dataset():
-  def _stage(m:Manager):
-    inp=stage_inputs(m)
-    ds=stage_dataset(m,inp)
-    return ds
-  rref=realize(instantiate(_stage))
-  return rref
 
 
 def examples_dataframe(fpath:str)->DataFrame:
@@ -89,7 +80,11 @@ def vis_bars(df:DataFrame, plot_fpath:str=None)->None:
   return
 
 def load():
-  rref=build_dataset()
+  def _stage(m:Manager):
+    inp=stage_inputs(m)
+    ds=stage_dataset2(m,inp)
+    return ds
+  rref=realize(instantiate(_stage))
   print(mklens(rref).syspath)
   df=examples_dataframe(mklens(rref).out_examples.syspath)
   return df
