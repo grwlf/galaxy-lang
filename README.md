@@ -33,9 +33,15 @@ References
 * https://www.datadoghq.com/blog/engineering/protobuf-parsing-in-python/
 * [Struct](https://docs.python.org/3/library/struct.html)
 
+**Pandas**
+
+* [GroupBy API Reference](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.groupby.html)
+* [GroupBy User Guide](https://pandas.pydata.org/pandas-docs/stable/user_guide/groupby.html)
+
 **Altair**
 
 * [Altair gallery](https://altair-viz.github.io/gallery/)
+* [Altair common customization](https://altair-viz.github.io/user_guide/customization.html)
 
 **Literate programming**
 
