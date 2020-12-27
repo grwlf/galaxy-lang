@@ -49,7 +49,7 @@ OpFilter=Dict[MethodName, Callable[[Expr,List[IExpr]],bool]]
 
 def genexpr(wlib:WLib,
             inputs:List[IMem]
-            )->Iterator[Tuple[Ref,TMap[Ref,Expr],List[IMem],int]]:
+            )->Iterator[Tuple[Ref,TMap[Ref,Expr],List[IMem],Dict[Ref,int]]]:
   """ Iterate over space of lambda-expressions with `len(inputs[0])` input
   arguments. For every expression visited, provide results of
   it's evaluation on every input of the `intputs` list.
@@ -111,5 +111,5 @@ def genexpr(wlib:WLib,
 
         exprcache[e2name] = e2expr
         exprw[e2name] = W
-        yield (e2name,TMap(exprcache),[TMap(fd) for fd in valcache],W)
+        yield (e2name,TMap(exprcache),[TMap(fd) for fd in valcache],exprw)
 

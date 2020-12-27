@@ -2,7 +2,9 @@ from galang.types import Expr, Ref, TMap, Intrin, Lam, Val, Const, Ap, Let, Mem
 from galang.edsl import let_
 from typing import List, Tuple, Dict, Union, Callable, Set, Optional, Iterator
 
+from functools import lru_cache
 
+@lru_cache(maxsize=128)
 def refs_(e:Expr, declarations:bool=True, references:bool=True)->Set[Ref]:
   """ Collect `Ref`s used by `Expr`. Could find reference declarations only or
   references uses only. """
@@ -28,12 +30,15 @@ def refs_(e:Expr, declarations:bool=True, references:bool=True)->Set[Ref]:
   else:
     raise ValueError(f"Invalid expression {e}")
 
+@lru_cache(maxsize=128)
 def decls(e:Expr)->Set[Ref]:
   return refs_(e, declarations=True, references=False)
 
+@lru_cache(maxsize=128)
 def refs(e:Expr)->Set[Ref]:
   return refs_(e, declarations=False, references=True)
 
+@lru_cache(maxsize=128)
 def extrefs(e:Expr)->Set[Ref]:
   return refs(e)-decls(e)
 

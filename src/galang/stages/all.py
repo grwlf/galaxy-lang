@@ -6,7 +6,8 @@ from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, permute, WLib, mkwlib
 from galang.types import (MethodName, TMap, Dict, mkmap, Ref, Mem, Expr, IVal,
                           IExpr, IMem, Example)
-from galang.utils import refs, print_expr, gather, gengather, extrefs, refs
+from galang.utils import (refs, print_expr, gather, gengather, extrefs, refs,
+                          decls)
 from galang.serjson import jstr2expr, expr2jstr, imem2json, json2imem
 from galang.serbin import (expr2bin, bin2expr, iexpr2bin, bin2iexpr, imem2bin,
                            bin2imem, BIN, examples2fd, fd2examples)
@@ -15,11 +16,11 @@ from pylightnix import (Build, Manager, DRef, Config, mkdrv, mkconfig,
                         match_only, build_wrapper, mklens, promise, writejson,
                         readjson, build_setoutpaths, realize, instantiate,
                         store_initialize, shell)
+from sys import maxsize
 from random import randint
 from time import time
 
-def stage_inputs(m:Manager)->DRef:
-  num_inputs = 4
+def stage_inputs(m:Manager, num_inputs:int=4)->DRef:
   batch_size = 5
   range_min= 0
   range_max = 100
@@ -37,7 +38,7 @@ def stage_inputs(m:Manager)->DRef:
   return mkdrv(m, mkconfig(_config()), match_only(), build_wrapper(_make))
 
 
-def stage_dataset(m:Manager, ref_inputs:DRef)->DRef:
+def stage_dataset1(m:Manager, ref_inputs:DRef)->DRef:
   Wdef = 5
   lib_impl = lib_arith
   lib_methods = [mn.val for mn in lib_impl.keys()]
@@ -65,7 +66,7 @@ def stage_dataset(m:Manager, ref_inputs:DRef)->DRef:
       while time()<time_start+mklens(b).time2run_sec.val:
         r,mem,vals,w = next(g)
         ival = vals[0]
-        assert isinstance(ival, IVal)
+        assert isinstance(ival[r], IVal)
         expr = gather(r,mem)
         acc.append(expr)
         i += 1
@@ -78,19 +79,20 @@ def stage_dataset(m:Manager, ref_inputs:DRef)->DRef:
 
 
 
-def stage_dataset2(m:Manager, ref_inputs:DRef)->DRef:
+def stage_dataset2(m:Manager, ref_inputs:DRef, gather_depth:int=999)->DRef:
   Wdef = 5
   lib_impl = lib_arith
   lib_methods = [mn.val for mn in lib_impl.keys()]
-  time2run_sec = int(0.5*60)
+  time2run_sec = maxsize # int(0.5*60)
+  maxitems = 5000 # 2210
   def _config():
     name = 'dataset2'
-    nonlocal Wdef,lib_methods,time2run_sec
+    nonlocal Wdef,lib_methods,time2run_sec,maxitems,gather_depth
     num_inputs = mklens(ref_inputs).num_inputs.val
     batch_size = mklens(ref_inputs).batch_size.val
     inputs = mklens(ref_inputs).out_inputs.refpath
     out_examples = [promise, 'examples.bin']
-    version = ['3']
+    version = ['18']
     return locals()
   def _make(b:Build):
     build_setoutpaths(b, 1)
@@ -98,24 +100,47 @@ def stage_dataset2(m:Manager, ref_inputs:DRef)->DRef:
     IMEMs = [json2imem(j) for j in readjson(mklens(b).inputs.syspath)]
     print(f"Inputs: {IMEMs}")
     i = 0
-    acc:List[Expr] = []
+    # acc:List[Expr] = []
     g = genexpr(WLIB, IMEMs)
     written_bytes = 0
+    written_items = 0
     time_start = time()
+    acci=set()
     with open(mklens(b).out_examples.syspath,'wb') as f:
       _add=examples2fd(f)
-      while time()<time_start+mklens(b).time2run_sec.val:
-        r,mem,imems,w = next(g)
+      while time()<time_start+mklens(b).time2run_sec.val and \
+            written_items<mklens(b).maxitems.val:
+        # gt0=time()
+        r,mem,imems,exprw = next(g)
+        # gt1=time()
+        # print('gen time', gt1-gt0)
         assert isinstance(imems[0][r], IVal), f"{imems[0][r]}"
-        for expr in gengather(r,mem):
-          acc.append(expr)
-          i += 1
+        i += 1
+        gi = 0
+        gexpr = gengather(r,mem)
+        # gg0=time()
+        exprs=[]
+        for expr in gexpr:
+          exprs.append(expr)
+
+        for expr in exprs[-gather_depth:]:
+          er=extrefs(expr)
+          ds=decls(expr)
+          # acc.append(expr)
           for j in range(len(IMEMs)):
-            inps = IMem({k:v for k,v in IMEMs[j].items() if k in extrefs(expr)})
-            if len(refs(expr))>1:
+            if len(ds)>0:
+              # print(gi, j, list(inps.keys()), print_expr(expr))
+              inps = IMem({k:imems[j][k] for k in er})
+              acci |= set(inps.values())
               written_bytes+=_add(Example(inps,expr,imems[j][r]))
-          if i%300 == 0:
-            print(f".. i {i} W {w} LAST_REF {r} WRBYTES {written_bytes // (1024) }K .. ")
+              written_items+=1
+              if written_items%100 == 0:
+                print(f".. NW {written_items} W {exprw[r]} "
+                      f"LAST_REF {r} WRBYTES {written_bytes // (1024) }K "
+                      f"INPSZ {len(acci)}")
+          gi+=1
+        # gg1=time()
+        # print('gather time', gg1-gg0)
 
   return mkdrv(m, mkconfig(_config()), match_only(), build_wrapper(_make))
 

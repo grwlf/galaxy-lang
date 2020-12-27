@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from typing import List, Optional, Any, Dict, Iterable, Callable
+from typing import List, Optional, Any, Dict, Iterable, Callable, Set
 
 from galang.interp import interp, IVal, IExpr, IMem
 from galang.edsl import let_, let, num, intrin, call, ref, num, lam, ap
@@ -10,7 +10,7 @@ from galang.types import MethodName, TMap, Dict, mkmap, Ref, Mem, Expr
 from galang.utils import refs, print_expr, gather
 
 from pylightnix import realize, instantiate, store_initialize, Manager, mklens
-from galang.stages.all import stage_inputs, stage_dataset, stage_dataset2
+from galang.stages.all import stage_inputs, stage_dataset1, stage_dataset2
 from galang.serbin import fd2examples
 from pandas import DataFrame
 from os import system
@@ -23,6 +23,24 @@ alt.data_transformers.disable_max_rows()
 
 store_initialize()
 
+def examples_refnames(fpath:str)->Set[Ref]:
+  print(f"Reading {fpath}")
+  acc:Set[Ref]=set()
+  with open(fpath,'rb') as f:
+    _next=fd2examples(f)
+    try:
+      i=0
+      while True:
+        example=_next()
+        for r,v in example.inp.items():
+          acc |= set({r})
+        i+=1
+    except KeyboardInterrupt:
+      raise
+    except Exception as e:
+      print(e)
+      pass
+    return acc
 
 def examples_dataframe(fpath:str)->DataFrame:
   print(f"Reading {fpath}")
@@ -51,8 +69,9 @@ def examples_dataframe(fpath:str)->DataFrame:
     except Exception as e:
       print(e)
       pass
+    df=DataFrame(d)
     print(f"Number of examples: {i}")
-    return DataFrame(d)
+    return df
 
 def _axis(alt_fn, col, title):
   return alt_fn(col, axis=alt.Axis(title=title))
@@ -75,17 +94,27 @@ def vis_bars(df:DataFrame, plot_fpath:str=None)->None:
     y=_axis(alt.Y, 'cnt', 'Count'),
     color=alt.value('red'))
 
+  print(f"Number of inputs: {len(df[df['isin']==1].index)}")
+  print(f"Number of outputs: {len(df[df['isin']==0].index)}")
+  print(f"Number of distinct inputs: {len(dfi.index)}")
+  print(f"Number of distinct outputs: {len(dfo.index)}")
   altair_save(chi & cho,fpath)
   system(f"feh {fpath}")
   return
 
-def load():
+def load(ver:int=2, num_inputs:int=4, gather_depth:int=999):
   def _stage(m:Manager):
-    inp=stage_inputs(m)
-    ds=stage_dataset2(m,inp)
+    inp=stage_inputs(m, num_inputs=num_inputs)
+    if ver==2:
+      ds=stage_dataset2(m,inp,gather_depth=gather_depth)
+    elif ver==1:
+      ds=stage_dataset1(m,inp)
+    else:
+      raise ValueError(f'Invalid version {ver}')
     return ds
   rref=realize(instantiate(_stage))
   print(mklens(rref).syspath)
+  print(examples_refnames(mklens(rref).out_examples.syspath))
   df=examples_dataframe(mklens(rref).out_examples.syspath)
   return df
 

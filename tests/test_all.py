@@ -118,14 +118,14 @@ def test_genexpr()->None:
                      Ref('c'):ival(2)})
   g = genexpr(wlib, [imem])
   for i in range(1000):
-    ref,mem,vals,w = next(g)
+    ref,mem,vals,exprw = next(g)
     expr = gather(ref,mem)
     iexpr,_ = interp(expr, lib_arith, imem)
     assert len(vals)==1
     assert iexpr==vals[0][ref]
     assert len(extrefs(expr))>0
     assert extrefs(expr).issubset(set([Ref('a'),Ref('b'),Ref('c')]))
-    print(print_expr(expr),iexpr)
+    print(print_expr(expr), iexpr)
 
 def test_serexpr():
   def _test(ie):
