@@ -79,18 +79,20 @@ def _axis(alt_fn, col, title):
 def vis_bars(df:DataFrame, plot_fpath:str=None)->None:
   fpath:str='_plot.png' if plot_fpath is None else plot_fpath
 
+  Qi=0.0
   dfi=df[df['isin']==1].groupby(by=['data'], as_index=False) \
                        .aggregate(cnt=pd.NamedAgg(column='isin', aggfunc='count'))
-  chi=alt.Chart(dfi).mark_bar().encode(
-    x=_axis(alt.X, 'data', 'Inputs'),
+  dfiq=dfi[dfi['cnt']>dfi['cnt'].quantile(Qi)]
+  chi=alt.Chart(dfiq).mark_bar().encode(
+    x=_axis(alt.X, 'data', f'Inputs above {Qi} quantile'),
     y=_axis(alt.Y, 'cnt', 'Count'))
 
   dfo=df[df['isin']==0].groupby(by=['data'], as_index=False) \
                        .aggregate(cnt=pd.NamedAgg(column='isin', aggfunc='count'))
-  Q=0.7
-  dfo=dfo[dfo['cnt']>dfo['cnt'].quantile(Q)]
-  cho=alt.Chart(dfo).mark_bar().encode(
-    x=_axis(alt.X, 'data', f'Outputs above {Q} quantile'),
+  Qo=0.0
+  dfoq=dfo[dfo['cnt']>dfo['cnt'].quantile(Qo)]
+  cho=alt.Chart(dfoq).mark_bar().encode(
+    x=_axis(alt.X, 'data', f'Outputs above {Qo} quantile'),
     y=_axis(alt.Y, 'cnt', 'Count'),
     color=alt.value('red'))
 
@@ -102,11 +104,11 @@ def vis_bars(df:DataFrame, plot_fpath:str=None)->None:
   system(f"feh {fpath}")
   return
 
-def load(ver:int=2, num_inputs:int=4, gather_depth:int=999):
+def load(ver:int=2, num_inputs:int=4, batch_size:int=5, **kwargs):
   def _stage(m:Manager):
-    inp=stage_inputs(m, num_inputs=num_inputs)
+    inp=stage_inputs(m, num_inputs=num_inputs, batch_size=batch_size)
     if ver==2:
-      ds=stage_dataset2(m,inp,gather_depth=gather_depth)
+      ds=stage_dataset2(m,inp,**kwargs)
     elif ver==1:
       ds=stage_dataset1(m,inp)
     else:

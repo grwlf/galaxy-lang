@@ -95,16 +95,20 @@ def genexpr(wlib:WLib,
                                   for nm,ai in zip(op.argnames, argrefs)])
 
         # TODO: Make this block customizable via callbacks
+        err=False
         acc:List[IExpr] = []
         for b in range(nbatch):
           e2val,_ = interp(e2expr, TMap(lib), TMap(valcache[b]))
+          if isinstance(e2val,IError):
+            err=True
+            break
+          if isinstance(e2val,IVal) and isinstance(e2val.val, int):
+            if abs(e2val.val)>10000 or abs(e2val.val)<-10000:
+              err=True
+              break
           acc.append(e2val)
-
-        if any([isinstance(x,IError) for x in acc]):
+        if err:
           continue
-        if isinstance(e2val,IVal) and isinstance(e2val.val, int):
-          if any([abs(e2val.val)>10000 or abs(e2val.val)<-10000 for x in acc]):
-            continue
 
         for b in range(nbatch):
           valcache[b][e2name] = acc[b]
