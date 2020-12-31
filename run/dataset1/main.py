@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from typing import List, Optional, Any, Dict, Iterable, Callable, Set
+from typing import List, Optional, Any, Dict, Iterable, Callable, Set, Iterator
 
 from galang.interp import interp, IVal, IExpr, IMem
 from galang.edsl import let_, let, num, intrin, call, ref, num, lam, ap
@@ -13,11 +13,14 @@ from pylightnix import realize, instantiate, store_initialize, Manager, mklens
 from galang.stages.all import stage_inputs, stage_dataset1, stage_dataset2
 from galang.serbin import fd2examples
 from pandas import DataFrame
+from pandas.core.groupby.generic import DataFrameGroupBy
 from os import system
 from altair_saver import save as altair_save
+from numpy.random import choice
 
 import pandas as pd
 import altair as alt
+import numpy as np
 
 alt.data_transformers.disable_max_rows()
 
@@ -43,10 +46,12 @@ def examples_refnames(fpath:str)->Set[Ref]:
     return acc
 
 def examples_dataframe(fpath:str)->DataFrame:
+  """ Loads protobuf into a DataFrame """
+  d:dict={'idx':[], 'data':[], 'isin':[]}
   print(f"Reading {fpath}")
-  d:dict={'data':[], 'isin':[]}
-  def _addval(v, isin:int)->None:
+  def _addval(v, isin:int, idx:int)->None:
     nonlocal d
+    d['idx'].append(idx)
     if isinstance(v,IVal) and \
        isinstance(v.val, int):
       d['data'].append(v.val)
@@ -57,26 +62,27 @@ def examples_dataframe(fpath:str)->DataFrame:
   with open(fpath,'rb') as f:
     _next=fd2examples(f)
     try:
-      i=0
+      idx=0
       while True:
         example=_next()
         for k,v in example.inp.items():
-          _addval(v,isin=1)
-        _addval(example.out,isin=0)
-        i+=1
+          _addval(v,isin=1,idx=idx)
+        _addval(example.out,isin=0,idx=idx)
+        idx+=1
     except KeyboardInterrupt:
       raise
     except Exception as e:
       print(e)
       pass
     df=DataFrame(d)
-    print(f"Number of examples: {i}")
+    print(f"Number of examples: {idx}")
     return df
 
 def _axis(alt_fn, col, title):
   return alt_fn(col, axis=alt.Axis(title=title))
 
-def vis_bars(df:DataFrame, plot_fpath:str=None)->None:
+def vis_bars(df:DataFrame, plot_fpath:str=None,
+             async_plot:Optional[bool]=True)->None:
   fpath:str='_plot.png' if plot_fpath is None else plot_fpath
 
   Qi=0.0
@@ -100,8 +106,10 @@ def vis_bars(df:DataFrame, plot_fpath:str=None)->None:
   print(f"Number of outputs: {len(df[df['isin']==0].index)}")
   print(f"Number of distinct inputs: {len(dfi.index)}")
   print(f"Number of distinct outputs: {len(dfo.index)}")
+  print(f"Saving {fpath}")
   altair_save(chi & cho,fpath)
-  system(f"feh {fpath}")
+  if async_plot is not None:
+    system(f"feh {fpath} {'&' if async_plot else ''}")
   return
 
 def load(ver:int=2, num_inputs:int=4, batch_size:int=5, **kwargs):
@@ -119,6 +127,53 @@ def load(ver:int=2, num_inputs:int=4, batch_size:int=5, **kwargs):
   print(examples_refnames(mklens(rref).out_examples.syspath))
   df=examples_dataframe(mklens(rref).out_examples.syspath)
   return df
+
+def uniform_sampling_weights(dfg:List[DataFrame], maxwMul:float=1)->List[float]:
+  maxw:float=max([len(g) for g in dfg])*maxwMul
+  acc=[]
+  for g in dfg:
+    acc.append(maxw - len(g))
+    # print(n, len(g), acc[-1])
+  return np.array(acc) / sum(acc)
+
+def filter_used(df:DataFrame, used_idx:Iterable[int])->DataFrame:
+  return df[~df.idx.isin(used_idx)]
+
+
+def group_outs(df):
+  return [g for _,g in df[df['isin']==0].groupby(by=['data'], as_index=False)]
+
+
+def iterate_uniform(df:DataFrame,
+                    f_grp:Callable[[DataFrame],List[DataFrame]])->Iterator[Set[int]]:
+  acc:Set[int]=set()  # Example idxes
+  while True:
+    gs = f_grp(df)
+    if len(gs)==0:
+      break
+    print(len(gs))
+
+    idxs=uniform_sampling_weights(gs, 1.1)
+
+    acc_portion:Set[int]=set()
+    for _ in range(100):
+      gi:int=choice(list(range(len(gs))), 1, p=idxs)[0]
+      idx=gs[gi].sample().idx.iloc[0]
+      if idx not in acc:
+        acc_portion.add(idx)
+
+    df2 = filter_used(df, acc_portion)
+    acc |= acc_portion
+    yield acc
+    df = df2
+
+  return acc
+
+def stabilize(df):
+  for i,selected in enumerate(iterate_uniform(df, group_outs)):
+    df2=df[df.idx.isin(selected)]
+    vis_bars(df2, plot_fpath=f'_plot_{i:03d}.png', async_plot=None)
+
 
 def run():
   _=load()
