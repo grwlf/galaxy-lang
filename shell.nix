@@ -145,7 +145,15 @@ let
 
       feh
 
-      (texlive.override { python=pkgs.python3; }).combined.scheme-medium
+      (let
+         mytexlive = texlive.override { python=pkgs.python3; };
+       in
+         mytexlive.combine {
+           scheme-medium = mytexlive.scheme-medium;
+           inherit (mytexlive) fvextra upquote xstring pgfopts currfile
+                               collection-langcyrillic;
+         }
+      )
     ]);
 
     shellHook = with pkgs; ''
