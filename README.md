@@ -12,11 +12,13 @@ reside in this place.
 Usage
 -----
 
-0. Install Nix package manager
-1. Type `nix-shell` to enter development shell
-2. Compile Protobuf wrappers `protoc src/galang/serbin.proto --python_out=.`
-3. Run `./ipython.sh` helper to run IPython
-4. ... (work is in progress)
+1. Install [Nix package manager](https://github.com/NixOS/nix)
+2. Clone this repo and it's submodules:
+   `git clone --recursive https://github.com/grwlf/galaxy-lang && cd galaxy-lang`
+3. Type `nix-shell` to build/fetch dependencies and enter development shell.
+4. Compile Protobuf wrappers `protoc src/galang/serbin.proto --python_out=.`
+5. Run `./ipython.sh` helper to enter IPython shell.
+6. ... (work is in progress)
 
 
 References
@@ -43,9 +45,14 @@ References
 * [Altair gallery](https://altair-viz.github.io/gallery/)
 * [Altair common customization](https://altair-viz.github.io/user_guide/customization.html)
 
-**Literate programming**
+**LaTeX**
 
-* [Lepton](https://www.math.univ-paris13.fr/~lithiao/ResearchLepton/Lepton.html)
-  - [Sources](https://github.com/slithiaote/lepton)
-* [Pythontex](https://github.com/gpoore/pythontex)
+* [Algorithms](https://shantoroy.com/latex/how-to-write-algorithm-in-latex/)
+* [UtilSnips](https://github.com/SirVer/ultisnips)
+* [Vim+LaTex guide (in Russian)](https://m.habr.com/ru/post/445066/)
+* Literate programming:
+  - [Lepton](https://www.math.univ-paris13.fr/~lithiao/ResearchLepton/Lepton.html)
+    + [Lepton Sources](https://github.com/slithiaote/lepton)
+  - [Pythontex](https://github.com/gpoore/pythontex)
+
 
