@@ -46,5 +46,6 @@ References
 **Literate programming**
 
 * [Lepton](https://www.math.univ-paris13.fr/~lithiao/ResearchLepton/Lepton.html)
+  - [Sources](https://github.com/slithiaote/lepton)
 * [Pythontex](https://github.com/gpoore/pythontex)
 
