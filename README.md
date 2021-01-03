@@ -55,4 +55,8 @@ References
     + [Lepton Sources](https://github.com/slithiaote/lepton)
   - [Pythontex](https://github.com/gpoore/pythontex)
 
+**Math**
+
+* [Mean and Variance](https://online.stat.psu.edu/stat414/lesson/24/24.3)
+* [Sample Mean and Variance](https://online.stat.psu.edu/stat414/lesson/26/26.3)
 
