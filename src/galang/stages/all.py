@@ -103,10 +103,10 @@ def stage_dataset2(m:Manager, ref_inputs:DRef,
   time2run_sec:int = maxsize if maxtime_sec is None else maxtime_sec
   maxitems:int = maxsize if maxitems is None else maxitems
   def _config():
-    name = 'dataset2'
     nonlocal Wdef,lib_methods,time2run_sec,maxitems,gather_depth
     num_inputs = mklens(ref_inputs).num_inputs.val
     batch_size = mklens(ref_inputs).batch_size.val
+    name=f'dataset2-ni{num_inputs}-bs{batch_size}-Wd{Wdef}-mi{maxitems}'
     inputs = mklens(ref_inputs).out_inputs.refpath
     out_examples = [promise, 'examples.bin']
     version = ['21']

@@ -60,3 +60,7 @@ References
 * [Mean and Variance](https://online.stat.psu.edu/stat414/lesson/24/24.3)
 * [Sample Mean and Variance](https://online.stat.psu.edu/stat414/lesson/26/26.3)
 
+Related issues
+--------------
+
+* https://github.com/altair-viz/altair/issues/984
