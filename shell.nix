@@ -154,6 +154,7 @@ let
                                collection-langcyrillic;
          }
       )
+      scipy
     ]);
 
     shellHook = with pkgs; ''

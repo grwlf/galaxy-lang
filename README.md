@@ -61,7 +61,7 @@ References
 * [Sample Mean and Variance](https://online.stat.psu.edu/stat414/lesson/26/26.3)
 * [MathExchange question asking about Uniformity checks](https://math.stackexchange.com/questions/2435/is-there-a-simple-test-for-uniform-distributions)
 * [Kolmogorov-Smirnov test](https://en.wikipedia.org/wiki/Kolmogorov%E2%80%93Smirnov_test)
-  - [ScyPy implementation](https://docs.scipy.org/doc/scipy-1.6.0/reference/generated/scipy.stats.kstest.html)
+  - [SciPy implementation](https://docs.scipy.org/doc/scipy-1.6.0/reference/generated/scipy.stats.kstest.html)
 
 Related issues
 --------------
