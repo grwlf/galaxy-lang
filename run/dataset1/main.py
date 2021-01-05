@@ -20,6 +20,7 @@ from pandas.core.groupby.generic import DataFrameGroupBy
 from os import system
 from altair_saver import save as altair_save
 from numpy.random import choice
+from scipy.stats import kstest
 
 import pandas as pd
 import altair as alt
@@ -119,22 +120,6 @@ def vis_bars(df:DataFrame, plot_fpath:str=None,
     system(f"feh {fpath} {'&' if async_plot else ''}")
   return
 
-def load(ver:int=2, num_inputs:int=4, batch_size:int=5, **kwargs):
-  def _stage(m:Manager):
-    inp=stage_inputs(m, num_inputs=num_inputs, batch_size=batch_size)
-    if ver==2:
-      ds=stage_dataset2(m,inp,**kwargs)
-    elif ver==1:
-      ds=stage_dataset1(m,inp)
-    else:
-      raise ValueError(f'Invalid version {ver}')
-    return ds
-  rref=realize(instantiate(_stage))
-  print(mklens(rref).syspath)
-  print(examples_refnames(mklens(rref).out_examples.syspath))
-  df=examples_dataframe(mklens(rref).out_examples.syspath)
-  return df
-
 
 def stage_df(m:Manager, ref_data:DRef):
   def _config():
@@ -188,7 +173,8 @@ def iterate_uniform(df:DataFrame,
     gs = f_grp(df)
     if len(gs)==0:
       break
-    print(len(gs))
+    print('Number of non-empty groups:', len(gs), '#entries', sum([len(g.index)
+                                                                   for g in gs]))
 
     idxs=uniform_sampling_weights(gs, 1.1)
 
@@ -207,11 +193,22 @@ def iterate_uniform(df:DataFrame,
   return acc
 
 def stabilize(df):
+  system("rm _plot*png")
+  system("rm _stabilize_*png")
+  acc:dict={'n':[],'data':[]}
+  N=1000
   for i,selected in enumerate(iterate_uniform(df, group_outs)):
     df2=df[df.idx.isin(selected)]
+    dfo=df2[df2['isin']==0]
+    ksres=kstest(dfo['data'].sample(min(N,len(dfo.index))).to_numpy(),'uniform')
+    print(ksres)
+    acc['n'].append(len(dfo.index))
+    acc['data'].append(ksres[0])
     vis_bars(df2, plot_fpath=f'_plot_{i:03d}.png', async_plot=None)
+    altair_save(alt.Chart(DataFrame(acc)).mark_line().encode(
+      x='n', y='data'), './stabilize.png')
 
-def run(mode:int=2):
+def run(mode:int=2, interactive:bool=True):
   maxitems=5000
   Wdef=1
   gather_depth=None
@@ -231,9 +228,11 @@ def run(mode:int=2):
     dsvis=stage_vis(m,df)
     return dsvis
 
-  rref=realize(instantiate(_stage), force_rebuild=True)
+  rref=realize(instantiate(_stage), force_rebuild=interactive)
   linkrref(rref, '_results')
-  system(f"feh {mklens(rref).out_plot.syspath} &")
+  if interactive:
+    system(f"feh {mklens(rref).out_plot.syspath} &")
+  return rref
   # df=examples_dataframe(mklens(rref).out_examples.syspath)
   # df2=df[~df['isin']].groupby(by=['data','isin'], as_index=False).count()
   # print(df2.head())
@@ -243,6 +242,16 @@ def run(mode:int=2):
   # altair_save(ch,'_plot.png')
   # system("feh _plot.png")
   # print('Done')
+
+def load(what:int)->DataFrame:
+  rref=run(what, interactive=False)
+  df=pd.read_csv(mklens(rref).df.syspath)
+  return df
+
+
+def tryks():
+  df=load(2)
+  print(kstest(df[df['isin']==0]['data'].to_numpy(),'uniform'))
 
 if __name__=='__main__':
   run()

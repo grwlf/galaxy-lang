@@ -67,3 +67,5 @@ Related issues
 --------------
 
 * https://github.com/altair-viz/altair/issues/984
+* https://math.stackexchange.com/questions/3973622/explain-the-behavior-of-ks-test-when-testing-for-uniformity
+
