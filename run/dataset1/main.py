@@ -6,7 +6,7 @@ from galang.interp import interp, IVal, IExpr, IMem
 from galang.edsl import let_, let, num, intrin, call, ref, num, lam, ap
 from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, permute, WLib, mkwlib
-from galang.types import MethodName, TMap, Dict, mkmap, Ref, Mem, Expr
+from galang.types import MethodName, TMap, Dict, mkmap, Ref, Mem, Expr, Tuple
 from galang.utils import refs, print_expr, gather
 
 from pylightnix import (Manager, Build, DRef, realize, instantiate,
@@ -21,6 +21,8 @@ from os import system
 from altair_saver import save as altair_save
 from numpy.random import choice
 from scipy.stats import kstest
+from collections import defaultdict
+from copy import deepcopy
 
 import pandas as pd
 import altair as alt
@@ -96,7 +98,8 @@ def vis_bars(df:DataFrame, plot_fpath:str=None,
   dfiq=dfi[dfi['cnt']>dfi['cnt'].quantile(Qi)]
   chi=alt.Chart(dfiq).mark_bar().encode(
     x=_axis(alt.X, 'data', f'Inputs above {Qi} quantile'),
-    y=_axis(alt.Y, 'cnt', 'Count'))
+    y=_axis(alt.Y, 'cnt', 'Count')).properties(
+      title=f"Total {len(df[df['isin']==1].index)} entries")
 
   if plot_title is not None:
     chi=chi.properties(title=plot_title)
@@ -108,14 +111,15 @@ def vis_bars(df:DataFrame, plot_fpath:str=None,
   cho=alt.Chart(dfoq).mark_bar().encode(
     x=_axis(alt.X, 'data', f'Outputs above {Qo} quantile'),
     y=_axis(alt.Y, 'cnt', 'Count'),
-    color=alt.value('red'))
+    color=alt.value('red')).properties(
+      title=f"Total {len(df[df['isin']==0].index)} entries")
 
   print(f"Number of inputs: {len(df[df['isin']==1].index)}")
   print(f"Number of outputs: {len(df[df['isin']==0].index)}")
   print(f"Number of distinct inputs: {len(dfi.index)}")
   print(f"Number of distinct outputs: {len(dfo.index)}")
   print(f"Saving {fpath}")
-  altair_save(chi & cho,fpath)
+  altair_save((chi & cho),fpath)
   if async_plot is not None:
     system(f"feh {fpath} {'&' if async_plot else ''}")
   return
@@ -150,45 +154,67 @@ def stage_vis(m:Manager, ref_df:DRef):
   return mkdrv(m, mkconfig(_config()), match_latest(), build_wrapper(_make))
 
 
-def uniform_sampling_weights(dfg:List[DataFrame], maxwMul:float=1)->List[float]:
-  maxw:float=max([len(g) for g in dfg])*maxwMul
-  acc=[]
-  for g in dfg:
-    acc.append(maxw - len(g))
-    # print(n, len(g), acc[-1])
-  return np.array(acc) / sum(acc)
-
 def filter_used(df:DataFrame, used_idx:Iterable[int])->DataFrame:
   return df[~df.idx.isin(used_idx)]
 
 
-def group_outs(df):
-  return [g for _,g in df[df['isin']==0].groupby(by=['data'], as_index=False)]
+#: Group identifier is a unique integer
+GrpId=int
+#: State contains the sizes of every group
+GrpState=Dict[GrpId,int]
+#: GrpFn splits a DataFrame into groups with uniq identifier
+GrpFn=Callable[[DataFrame],Dict[GrpId,DataFrame]]
 
+def group_outs(df:DataFrame)->Dict[GrpId,DataFrame]:
+  """ Split DataFrame into non-intersecting groups, where each group has it's
+  own unique identifier"""
+  return {int(g['data'].mean()):g for _,g in
+          df[df['isin']==0].groupby(by=['data'], as_index=False)}
+
+
+def uniform_sampling_weights(gstate:GrpState,
+                             gnew:Dict[GrpId,DataFrame],
+                             maxwMul:float=1)->Tuple[Dict[GrpId,float],GrpState]:
+  gstate2=deepcopy(gstate)
+  for gid,g in gnew.items():
+    gstate2[gid]+=len(g.index)
+  maxw:float=max([gsize for _,gsize in gstate2.items()])*maxwMul
+  acc={}
+  for gid,g in gnew.items():
+    acc[gid]=maxw-len(g.index)
+  acc={gid:w/sum(acc.values()) for gid,w in acc.items()}
+  return acc,gstate2
 
 def iterate_uniform(df:DataFrame,
-                    f_grp:Callable[[DataFrame],List[DataFrame]])->Iterator[Set[int]]:
-  acc:Set[int]=set()  # Example idxes
+                    f_grp:GrpFn,
+                    gstate:Optional[GrpState]=None
+                    )->Iterator[Tuple[Set[int],GrpState]]:
+  acc:Set[int]=set()  # Collected idxes of Examples
+  gstate:GrpState=defaultdict(int) if gstate is None else gstate
+  miss=0
   while True:
-    gs = f_grp(df)
-    if len(gs)==0:
+    gs:Dict[GrpId,DataFrame]=f_grp(df)
+    if len(gs.keys())==0:
       break
-    print('Number of non-empty groups:', len(gs), '#entries', sum([len(g.index)
-                                                                   for g in gs]))
-
-    idxs=uniform_sampling_weights(gs, 1.1)
-
+    gsw,gstate2=uniform_sampling_weights(gstate, gs, 1.1)
+    print('#groups-new', len(gs.keys()),
+          '#groups-total', len(gstate2.keys()),
+          '#entries-new', sum([len(g.index) for g in gs.values()]),
+          '#group-misses', miss)
     acc_portion:Set[int]=set()
-    for _ in range(100):
-      gi:int=choice(list(range(len(gs))), 1, p=idxs)[0]
-      idx=gs[gi].sample().idx.iloc[0]
+    gids:List[int]=choice(list(gsw.keys()), 100, p=list(gsw.values()))
+    for gid in gids:
+      assert gid in gs
+      idx=gs[gid].sample().idx.iloc[0]
       if idx not in acc:
         acc_portion.add(idx)
-
+      else:
+        miss+=1
     df2 = filter_used(df, acc_portion)
     acc |= acc_portion
-    yield acc
-    df = df2
+    yield acc,gstate2
+    df=df2
+    gstate=gstate2
 
   return acc
 
@@ -197,7 +223,7 @@ def stabilize(df):
   system("rm _stabilize_*png")
   acc:dict={'n':[],'data':[]}
   N=1000
-  for i,selected in enumerate(iterate_uniform(df, group_outs)):
+  for i,(selected,gstate) in enumerate(iterate_uniform(df, group_outs)):
     df2=df[df.idx.isin(selected)]
     dfo=df2[df2['isin']==0]
     ksres=kstest(dfo['data'].sample(min(N,len(dfo.index))).to_numpy(),'uniform')
@@ -206,7 +232,8 @@ def stabilize(df):
     acc['data'].append(ksres[0])
     vis_bars(df2, plot_fpath=f'_plot_{i:03d}.png', async_plot=None)
     altair_save(alt.Chart(DataFrame(acc)).mark_line().encode(
-      x='n', y='data'), './stabilize.png')
+                          x='n', y='data').properties(),
+                './stabilize.png')
 
 def run(mode:int=2, interactive:bool=True):
   maxitems=5000
