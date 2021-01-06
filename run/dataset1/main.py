@@ -33,25 +33,6 @@ alt.data_transformers.disable_max_rows()
 
 store_initialize()
 
-def examples_refnames(fpath:str)->Set[Ref]:
-  print(f"Reading {fpath}")
-  acc:Set[Ref]=set()
-  with open(fpath,'rb') as f:
-    _next=fd2examples(f)
-    try:
-      i=0
-      while True:
-        example=_next()
-        for r,v in example.inp.items():
-          acc |= set({r})
-        i+=1
-    except KeyboardInterrupt:
-      raise
-    except Exception as e:
-      print(e)
-      pass
-    return acc
-
 def examples_dataframe(fpath:str)->DataFrame:
   """ Loads protobuf into a DataFrame """
   d:dict={'idx':[], 'data':[], 'isin':[]}
