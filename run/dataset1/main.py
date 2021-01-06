@@ -6,7 +6,8 @@ from galang.interp import interp, IVal, IExpr, IMem
 from galang.edsl import let_, let, num, intrin, call, ref, num, lam, ap
 from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, permute, WLib, mkwlib
-from galang.types import MethodName, TMap, Dict, mkmap, Ref, Mem, Expr, Tuple
+from galang.types import (MethodName, TMap, Dict, mkmap, Ref, Mem, Expr, Tuple,
+                          NamedTuple)
 from galang.utils import refs, print_expr, gather
 
 from pylightnix import (Manager, Build, DRef, realize, instantiate,
@@ -154,9 +155,6 @@ def stage_vis(m:Manager, ref_df:DRef):
   return mkdrv(m, mkconfig(_config()), match_latest(), build_wrapper(_make))
 
 
-def filter_used(df:DataFrame, used_idx:Iterable[int])->DataFrame:
-  return df[~df.idx.isin(used_idx)]
-
 
 #: Group identifier is a unique integer
 GrpId=int
@@ -164,6 +162,12 @@ GrpId=int
 GrpState=Dict[GrpId,int]
 #: GrpFn splits a DataFrame into groups with uniq identifier
 GrpFn=Callable[[DataFrame],Dict[GrpId,DataFrame]]
+
+def group_ins(df:DataFrame)->Dict[GrpId,DataFrame]:
+  """ Split DataFrame into non-intersecting groups, where each group has it's
+  own unique identifier"""
+  return {int(g['data'].mean()):g for _,g in
+          df[df['isin']==1].groupby(by=['data'], as_index=False)}
 
 def group_outs(df:DataFrame)->Dict[GrpId,DataFrame]:
   """ Split DataFrame into non-intersecting groups, where each group has it's
@@ -174,7 +178,7 @@ def group_outs(df:DataFrame)->Dict[GrpId,DataFrame]:
 
 def uniform_sampling_weights(gstate:GrpState,
                              gnew:Dict[GrpId,DataFrame],
-                             maxwMul:float=1)->Tuple[Dict[GrpId,float],GrpState]:
+                             maxwMul:float=1)->Dict[GrpId,float]:
   gstate2=deepcopy(gstate)
   for gid,g in gnew.items():
     gstate2[gid]+=len(g.index)
@@ -183,57 +187,86 @@ def uniform_sampling_weights(gstate:GrpState,
   for gid,g in gnew.items():
     acc[gid]=maxw-len(g.index)
   acc={gid:w/sum(acc.values()) for gid,w in acc.items()}
-  return acc,gstate2
-
-def iterate_uniform(df:DataFrame,
-                    f_grp:GrpFn,
-                    gstate:Optional[GrpState]=None
-                    )->Iterator[Tuple[Set[int],GrpState]]:
-  acc:Set[int]=set()  # Collected idxes of Examples
-  gstate:GrpState=defaultdict(int) if gstate is None else gstate
-  miss=0
-  while True:
-    gs:Dict[GrpId,DataFrame]=f_grp(df)
-    if len(gs.keys())==0:
-      break
-    gsw,gstate2=uniform_sampling_weights(gstate, gs, 1.1)
-    print('#groups-new', len(gs.keys()),
-          '#groups-total', len(gstate2.keys()),
-          '#entries-new', sum([len(g.index) for g in gs.values()]),
-          '#group-misses', miss)
-    acc_portion:Set[int]=set()
-    gids:List[int]=choice(list(gsw.keys()), 100, p=list(gsw.values()))
-    for gid in gids:
-      assert gid in gs
-      idx=gs[gid].sample().idx.iloc[0]
-      if idx not in acc:
-        acc_portion.add(idx)
-      else:
-        miss+=1
-    df2 = filter_used(df, acc_portion)
-    acc |= acc_portion
-    yield acc,gstate2
-    df=df2
-    gstate=gstate2
-
   return acc
 
-def stabilize(df):
+def promote_uniform(gs:Dict[GrpId,DataFrame], gstate:GrpState)-> Set[int]:
+  miss=0
+  acc:Set[int]=set()  # Collected idxes of Examples
+  if len(gs.keys())==0:
+    return set()
+  gsw=uniform_sampling_weights(gstate, gs, 1.1)
+  print('#groups-new', len(gs.keys()),
+        '#entries-new', sum([len(g.index) for g in gs.values()]),
+        '#group-misses', miss)
+  gids:List[int]=choice(list(gsw.keys()), 100, p=list(gsw.values()))
+  for gid in gids:
+    assert gid in gs
+    idx=gs[gid].sample().idx.iloc[0]
+    if idx not in acc:
+      acc.add(idx)
+    else:
+      miss+=1
+  return acc
+
+  # df2=remove_used(df, acc_portion)
+
+class StabState:
+  def __init__(self):
+    self.inp:GrpState=defaultdict(int)
+    self.out:GrpState=defaultdict(int)
+
+def stabilize(df0, sstate:StabState=StabState()):
+  """
+  FIXME: fix the state, introduce GrpState re-calculation based on currently
+  used examples.
+  """
   system("rm _plot*png")
-  system("rm _stabilize_*png")
-  acc:dict={'n':[],'data':[]}
+  system("rm _stabilize*png")
+  acc:dict={'n':[],'stati':[], 'stato':[]}
   N=1000
-  for i,(selected,gstate) in enumerate(iterate_uniform(df, group_outs)):
-    df2=df[df.idx.isin(selected)]
-    dfo=df2[df2['isin']==0]
+
+  i=0
+  used:Set[int]=set()
+  df=df0
+
+  def _remove_used(used_idx:Iterable[int]):
+    nonlocal df, sstate, used
+    for d in df[df.idx.isin(used_idx) & df['isin']==1]['data']:
+      sstate.inp[d]+=1
+    for d in df[df.idx.isin(used_idx) & df['isin']==0]['data']:
+      sstate.out[d]+=1
+    df=df[~df.idx.isin(used_idx)]
+    used|=set(used_idx)
+
+  while True:
+    print(f"i={i}")
+
+    used_o=promote_uniform(group_outs(df), sstate.out)
+    if len(used_o)==0:
+      print('No difference in outputs')
+      break
+    _remove_used(used_o)
+
+    used_i=promote_uniform(group_ins(df), sstate.inp)
+    if len(used_i)==0:
+      print('No difference in inputs')
+      break
+    _remove_used(used_i)
+
+    acc['n'].append(len(used))
+    dfu=df0[df0.idx.isin(used)]
+    dfo=dfu[dfu['isin']==0]
+    # print(dfo)
     ksres=kstest(dfo['data'].sample(min(N,len(dfo.index))).to_numpy(),'uniform')
-    print(ksres)
-    acc['n'].append(len(dfo.index))
-    acc['data'].append(ksres[0])
-    vis_bars(df2, plot_fpath=f'_plot_{i:03d}.png', async_plot=None)
-    altair_save(alt.Chart(DataFrame(acc)).mark_line().encode(
-                          x='n', y='data').properties(),
-                './stabilize.png')
+    acc['stato'].append(ksres[0])
+    dfi=dfu[dfu['isin']==1]
+    ksres=kstest(dfi['data'].sample(min(N,len(dfi.index))).to_numpy(),'uniform')
+    acc['stati'].append(ksres[0])
+    vis_bars(dfu, plot_fpath=f'_plot_{i:03d}.png', async_plot=None)
+    altair_save(alt.Chart(DataFrame(acc)).mark_line(color='red').encode(x='n', y='stato')+
+                alt.Chart(DataFrame(acc)).mark_line(color='blue').encode(x='n', y='stati'),
+                './_stabilize.png')
+    i+=1
 
 def run(mode:int=2, interactive:bool=True):
   maxitems=5000
