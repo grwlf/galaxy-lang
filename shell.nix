@@ -151,7 +151,7 @@ let
          mytexlive.combine {
            scheme-medium = mytexlive.scheme-medium;
            inherit (mytexlive) fvextra upquote xstring pgfopts currfile
-                               collection-langcyrillic;
+                               collection-langcyrillic makecell ftnxtra;
          }
       )
       scipy

@@ -1,0 +1,39 @@
+\documentclass{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage[russian,english]{babel}
+\usepackage{listings}
+\usepackage{pythontex}
+
+\newcommand{\pymultiply}[2]{\py{#1*#2}}
+
+\begin{document}
+\selectlanguage{russian}
+
+\begin{pycode}
+print("Python says ``Hello!''")
+\end{pycode}
+
+The document is partly in Russian, например, тут:
+
+$8 \times 256 = \pymultiply{8}{256}$
+
+
+\newcounter{codecounter}
+\begin{lstlisting}[escapeinside={(*}{*)}, numbers=left]
+/* Hello World program */
+
+#include<stdio.h>
+main()
+{
+    printf("Hello World"); (*\label{code:printf}*)
+    double a = b (*\textcolor{red}{\footnote{This is a variable $b$}}*) + c;
+    double d = b (*\textcolor{red}{(\refstepcounter{codecounter}\thecodecounter\label{code:b})}*) + c;
+}
+
+\end{lstlisting}
+
+\end{document}
+

@@ -1,0 +1,70 @@
+\documentclass{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage[russian,english]{babel}
+\usepackage{listings}
+\usepackage{pythontex}
+\usepackage{makecell}
+\newcommand{\pymultiply}[2]{\py{#1*#2}}
+
+\begin{document}
+\selectlanguage{russian}
+
+\begin{pycode}
+print("Python says ``Hello!''")
+\end{pycode}
+
+The document is partly in Russian, например, тут:
+
+$8 \times 256 = \pymultiply{8}{256}$
+
+
+
+\begin{tabular}{|c|c|}
+\hline
+
+\newcounter{codecounter}
+\begin{lstlisting}[escapeinside={(*}{*)}, numbers=left]
+/* Hello World program */
+
+#include<stdio.h>
+main()
+{
+    printf("Hello Left World"); (*\label{code:printf1}*)
+    double a = b (*\textcolor{red}{\footnote{This is a variable $b$}}*) + c;
+    double d = b (*\textcolor{red}{(\refstepcounter{codecounter}\thecodecounter\label{code:b})}*) + c;
+}
+\end{lstlisting}
+
+&
+
+\newcounter{codecounter2}
+\begin{lstlisting}[escapeinside={(*}{*)}, numbers=left]
+/* Hello World program */
+
+#include<stdio.h>
+main()
+{
+    int foo=1;
+    int bar=33;
+    printf("Hello Right World"); (*\label{code:printf2}*)
+    double a = b (*\textcolor{red}{\footnote{This is a variable $b$}}*) + c;
+    double d = b (*\textcolor{red}{(\refstepcounter{codecounter2}\thecodecounter\label{code:b})}*) + c;
+}
+\end{lstlisting}
+\\
+We produce the output in line \ref{code:printf1}.
+Fooo Baaar
+&
+And this output we produced in line \ref{code:printf2}.
+\\
+
+\hline
+\end{tabular}
+
+XXX \footnote{This is a variable $b$}}
+
+\end{document}
+

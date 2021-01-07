@@ -47,6 +47,7 @@ References
 
 **LaTeX**
 
+* [LaTeX-Tutorial](https://www.latex-tutorial.com/)
 * [Algorithms](https://shantoroy.com/latex/how-to-write-algorithm-in-latex/)
 * [UtilSnips](https://github.com/SirVer/ultisnips)
 * [Vim+LaTex guide (in Russian)](https://m.habr.com/ru/post/445066/)
@@ -54,6 +55,8 @@ References
   - [Lepton](https://www.math.univ-paris13.fr/~lithiao/ResearchLepton/Lepton.html)
     + [Lepton Sources](https://github.com/slithiaote/lepton)
   - [Pythontex](https://github.com/gpoore/pythontex)
+* Problems
+  - [Footnotes in tables](https://tex.stackexchange.com/questions/35200/footnotes-in-tabulars)
 
 **Math**
 
