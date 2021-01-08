@@ -7,7 +7,7 @@ from galang.gen import genexpr, permute, WLib, mkwlib
 from galang.types import (MethodName, TMap, Dict, mkmap, Ref, Mem, Expr, IVal,
                           IExpr, IMem, Example)
 from galang.utils import (refs, print_expr, gather, gengather, extrefs, refs,
-                          decls)
+                          decls, depth)
 from galang.serjson import jstr2expr, expr2jstr, imem2json, json2imem
 from galang.serbin import (expr2bin, bin2expr, iexpr2bin, bin2iexpr, imem2bin,
                            bin2imem, BIN, examples2fd, fd2examples)
@@ -27,12 +27,12 @@ def _union(d1,d2):
   d.update(d2)
   return d
 
-def stage_inputs(m:Manager, num_inputs:int=4, batch_size:int=5)->DRef:
+def stage_inputs(m:Manager, num_inputs:int=4, batch_size:int=5, index:int=1)->DRef:
   range_min = -100
   range_max = 100
   def _config():
     name = 'dataset-inputs'
-    nonlocal num_inputs, batch_size, range_min, range_max
+    nonlocal num_inputs, batch_size, range_min, range_max, index
     out_inputs = [promise, 'inputs.json']
     version = 4
     return locals()
@@ -159,7 +159,7 @@ def stage_dataset2(m:Manager, ref_inputs:DRef,
               written_items+=1
               hb2=time()
               if written_items%100 == 0:
-                print(f".. NW {written_items} W {exprw[r]} "
+                print(f".. NW {written_items} W {exprw[r]} DEP {depth(expr)} "
                       f"LAST_REF {r} WRBYTES {written_bytes // (1024) }K "
                       f"INPSZ {len(acci)} TIME {hb2-hb} "
                       f"VM {virtual_memory().used // 1024 // 1024}M")

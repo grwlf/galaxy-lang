@@ -42,6 +42,21 @@ def refs(e:Expr)->Set[Ref]:
 def extrefs(e:Expr)->Set[Ref]:
   return refs(e)-decls(e)
 
+def depth(e:Expr)->int:
+  """ Prints the expression """
+  if isinstance(e,Val):
+    return 1
+  elif isinstance(e, Ap):
+    return max(depth(e.func),depth(e.arg))+1
+  elif isinstance(e, Lam):
+    return depth(e.body)+1
+  elif isinstance(e, Let):
+    return max(depth(e.expr),depth(e.body))+1
+  elif isinstance(e, Intrin):
+    return 1
+  else:
+    raise ValueError(f"Invalid expression '{e}'")
+
 def print_expr(e:Expr)->str:
   """ Prints the expression """
   if isinstance(e,Val):

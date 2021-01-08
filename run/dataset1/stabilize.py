@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+from multiprocessing import Pool
 from typing import List, Optional, Any, Dict, Iterable, Callable, Set, Iterator
 
 from galang.interp import interp, IVal, IExpr, IMem
@@ -24,7 +25,8 @@ from numpy.random import choice
 from scipy.stats import kstest
 from collections import defaultdict
 from copy import deepcopy
-from os.path import join
+from os.path import join, isfile
+
 
 import pandas as pd
 import altair as alt
@@ -170,7 +172,9 @@ def uniform_sampling_weights(gstate:GrpState,
   acc={gid:w/sum(acc.values()) for gid,w in acc.items()}
   return acc
 
-def promote_uniform(gs:Dict[GrpId,DataFrame], gstate:GrpState)-> Set[int]:
+def promote_uniform(gs:Dict[GrpId,DataFrame],
+                    gstate:GrpState,
+                    npoints:int=100)-> Set[int]:
   miss=0
   acc:Set[int]=set()  # Collected idxes of Examples
   if len(gs.keys())==0:
@@ -179,7 +183,7 @@ def promote_uniform(gs:Dict[GrpId,DataFrame], gstate:GrpState)-> Set[int]:
   print('#groups-new', len(gs.keys()),
         '#entries-new', sum([len(g.index) for g in gs.values()]),
         '#group-misses', miss)
-  gids:List[int]=choice(list(gsw.keys()), 100, p=list(gsw.values()))
+  gids:List[int]=choice(list(gsw.keys()), npoints, p=list(gsw.values()))
   for gid in gids:
     assert gid in gs
     idx=gs[gid].sample().idx.iloc[0]
@@ -198,6 +202,7 @@ class StabState:
 
 def stabilize(df0, sstate:StabState=StabState(),
               min_allow_size:int=5000,
+              npoints:int=100,
               path_barplot=lambda i:f'_plot_{i:03d}.png',
               path_traceplot:str='./_stabilize.png')->Set[int]:
   """
@@ -207,7 +212,7 @@ def stabilize(df0, sstate:StabState=StabState(),
   # system("rm _plot*png")
   # system("rm _stabilize*png")
   acc:dict={'n':[],'stati':[], 'stato':[]}
-  N=1000
+  N=1000 # How many data to track for KS-metric
 
   i=0
   allowed:Set[int]=set()
@@ -229,7 +234,7 @@ def stabilize(df0, sstate:StabState=StabState(),
       print(f'Got enough examples: collected {len(allowed)}>={min_allow_size}')
       break
 
-    used_o=promote_uniform(group_outs(df), sstate.out)
+    used_o=promote_uniform(group_outs(df), sstate.out, npoints)
     if len(used_o)==0:
       print('No more data to pass through the filter')
       break
@@ -258,7 +263,7 @@ def stabilize(df0, sstate:StabState=StabState(),
     i+=1
   return allowed
 
-def run_dataset2(what:int=2, maxitems:int=5000, interactive:bool=True):
+def run_dataset2(what:int=2, maxitems:int=5000, index:int=1, interactive:bool=True):
   Wdef=1
   gather_depth=None
   num_inputs=2
@@ -270,7 +275,8 @@ def run_dataset2(what:int=2, maxitems:int=5000, interactive:bool=True):
     assert False, 'Invalid `what` argument'
 
   def _stage(m:Manager):
-    inp=stage_inputs(m, num_inputs=num_inputs, batch_size=batch_size)
+    inp=stage_inputs(m, num_inputs=num_inputs, batch_size=batch_size,
+                     index=index)
     ds=stage_dataset2(m, inp, Wdef=Wdef, maxitems=maxitems,
                       gather_depth=gather_depth)
     df=stage_df(m, ds)
@@ -303,26 +309,33 @@ def tryks():
   print(kstest(df[df['isin']==0]['data'].to_numpy(),'uniform'))
 
 
-def stage_datasetS(m:Manager)->DRef:
+def stage_datasetS(m:Manager, index:int=0, Nvalid:int=5000, npoints:int=100)->DRef:
   """ Creates stabilized dataset """
   def _config():
     name='dataset3'
-    N=5000
-    min_allow_size=3000
+    nonlocal index, npoints
+    N=int(5*Nvalid/3)
+    min_allow_size=Nvalid
     out_examples=[promise,'examples.bin']
     out_barplots=[promise,'barplots']
     out_traceplot=[promise,'traceplot.png']
+    out_inputs = [promise, 'inputs.json']
+    version = 2
     return locals()
   def _make(b:Build):
     build_setoutpaths(b,1)
-    rref=run_dataset2(what=2, maxitems=mklens(b).N.val, interactive=False)
+    rref=run_dataset2(what=2, maxitems=mklens(b).N.val, index=index, interactive=False)
+    assert isfile(mklens(rref).ref_df.examples.syspath)
+    system(f"cp {mklens(rref).ref_df.ref_data.inputs.syspath} {mklens(b).out_inputs.syspath}")
     df=pd.read_csv(mklens(rref).df.syspath)
     makedirs(mklens(b).out_barplots.syspath)
     allowed=stabilize(df,
+                      npoints=mklens(b).npoints.val,
                       path_barplot=lambda i: join(mklens(b).out_barplots.syspath,
                                                   f'_plot_{i:03d}.png'),
-                      path_traceplot=mklens(b).out_traceplot.syspath)
-    with open(mklens(rref).df.examples.syspath,'rb') as f:
+                      path_traceplot=mklens(b).out_traceplot.syspath,
+                      min_allow_size=mklens(b).min_allow_size.val)
+    with open(mklens(rref).ref_df.examples.syspath,'rb') as f:
       with open(mklens(b).out_examples.syspath,'wb') as f_o:
         _read=fd2examples(f)
         _write=examples2fd(f_o)
@@ -340,13 +353,19 @@ def stage_datasetS(m:Manager)->DRef:
           pass
   return mkdrv(m, mkconfig(_config()), match_only(), build_wrapper(_make))
 
+Nall=1000000
+N1=15000
+def myprocess(index):
+  rref=realize(instantiate(stage_datasetS, index=index, Nvalid=N1, npoints=2000))
+  linkrref(rref, join('.','_results','dataset3-1K',f"{index:04d}"))
 
-def run():
-  return realize(instantiate(stage_datasetS))
-
+def run(nproc:int):
+  indices=list(range(Nall//N1))
+  with Pool(nproc) as p:
+    p.map(myprocess, indices)
 
 if __name__=='__main__':
-  rref=run()
-  print(rref)
+  run(10)
+
 
 
