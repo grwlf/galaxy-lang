@@ -5,16 +5,36 @@
 \usepackage{amsmath,amssymb}
 \usepackage[russian,english]{babel}
 \usepackage{listings}
-\usepackage{pythontex}
+\usepackage[rerun=always]{pythontex}
+\usepackage[a4paper, total={6in, 8in}]{geometry}
 
 \newcommand{\pymultiply}[2]{\py{#1*#2}}
 
 \begin{document}
 \selectlanguage{russian}
 
+\par
+Pycode
+\par
 \begin{pycode}
 print("Python says ``Hello!''")
 \end{pycode}
+
+\par
+Now trying pyv
+\par
+
+\begin{pyblock}
+print("Python says Hello!")
+\end{pyblock}
+
+\par
+Now pyconsole
+\par
+\begin{pyconsole}
+print("Python says Hello!")
+raise ValueError('aaaaa')
+\end{pyconsole}
 
 The document is partly in Russian, например, тут:
 
