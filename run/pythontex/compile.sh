@@ -4,6 +4,6 @@ set -e -x
 
 F="$1"
 
-pdflatex -interaction=nonstopmode "$F"
+pdflatex --shell-escape -interaction=nonstopmode "$F"
 pythontex "$F"
-pdflatex -interaction=nonstopmode "$F"
+pdflatex --shell-escape -interaction=nonstopmode "$F"

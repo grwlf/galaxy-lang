@@ -51,6 +51,8 @@ References
 * [Algorithms](https://shantoroy.com/latex/how-to-write-algorithm-in-latex/)
 * [UtilSnips](https://github.com/SirVer/ultisnips)
 * [Vim+LaTex guide (in Russian)](https://m.habr.com/ru/post/445066/)
+* [Minted](https://www.overleaf.com/learn/latex/Code_Highlighting_with_minted)
+* [A4Paper](https://www.overleaf.com/learn/latex/page_size_and_margins)
 * Literate programming:
   - [Lepton](https://www.math.univ-paris13.fr/~lithiao/ResearchLepton/Lepton.html)
     + [Lepton Sources](https://github.com/slithiaote/lepton)
