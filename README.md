@@ -24,7 +24,7 @@ Usage
 References
 ----------
 
-**Papers**
+**Program Synthesis**
 
 * [TF-Coder at OpenReview](https://openreview.net/forum?id=nJ5Ij53umw2)
 
@@ -71,4 +71,8 @@ Related issues
 
 * https://github.com/altair-viz/altair/issues/984
 * https://math.stackexchange.com/questions/3973622/explain-the-behavior-of-ks-test-when-testing-for-uniformity
+* Nix+SOCKS proxy:
+  1. `ALL_PROXY=socks5h://localhost:8001 nix-prefetch-url <URL>`
+   - https://blog.emacsos.com/use-socks5-proxy-in-curl.html
+  2. `nix-shell`
 

@@ -131,7 +131,7 @@ let
       frozendict
       frozenordereddict
 
-      pytorch
+      pytorchWithCuda
 
       protobuf
       # mypy-protobuf Doesn't work
