@@ -2,6 +2,7 @@
 # { pkgs ?  import <nixpkgs> {}
 { pkgs ?  import ./3rdparty/nixpkgs {}
 , stdenv ? pkgs.stdenv
+, with_cuda ? true
 } :
 let
 
@@ -131,7 +132,7 @@ let
       frozendict
       frozenordereddict
 
-      pytorchWithCuda
+      (if with_cuda then pytorchWithCuda else pytorch)
 
       protobuf
       # mypy-protobuf Doesn't work

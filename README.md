@@ -16,6 +16,8 @@ Usage
 2. Clone this repo and it's submodules:
    `git clone --recursive https://github.com/grwlf/galaxy-lang && cd galaxy-lang`
 3. Type `nix-shell` to build/fetch dependencies and enter development shell.
+   - Default settings enable CUDA support. In order to disable it one could
+     `nix-shell --arg with_cuda false`.
 4. Compile Protobuf wrappers `protoc src/galang/serbin.proto --python_out=.`
 5. Run `./ipython.sh` helper to enter IPython shell.
 6. ... (work is in progress)
