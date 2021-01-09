@@ -85,4 +85,5 @@ Related issues
    - https://blog.emacsos.com/use-socks5-proxy-in-curl.html
   2. `nix-shell`
 * [Sharing sessions between pyblock and pyconsole](https://github.com/gpoore/pythontex/issues/55)
+* [Labels in PythonTex](https://github.com/gpoore/pythontex/issues/179)
 

@@ -6,22 +6,31 @@
 \usepackage[russian,english]{babel}
 \usepackage{minted}
 \renewcommand{\MintedPygmentize}{/nix/store/9r8n35slzprv3q4hfdnc0fz3r70z2y64-python3.7-Pygments-2.7.2/bin/pygmentize}
-\usepackage[rerun=always]{pythontex}
-\newcommand{\pymultiply}[2]{\py{#1*#2}}
-\usepackage[a4paper, total={6in, 8in}]{geometry}
+\usepackage[rerun=always, pygopt={texcomments=true}]{pythontex}
+%\newcommand{\pymultiply}[2]{\py{#1*#2}}
+% \usepackage[landscape]{geometry}
+\usepackage{lscape}
+\usepackage[a3paper]{geometry}
+\usepackage{pdflscape}
+\usepackage{longtable}
 
-\newenvironment{pyconcodeblock}%
- {\VerbatimEnvironment
-  \begin{VerbatimOut}{_temp.py}}%
- {\end{VerbatimOut}%
-  \pyconc{exec(compile(open('_temp.py', 'rb').read(), '_temp.py', 'exec'))}%
-  \inputpygments{python}{_temp.py}}
+% \newenvironment{pyconcodeblock}%
+%  {\VerbatimEnvironment
+%   \begin{VerbatimOut}{_temp.py}}%
+%  {\end{VerbatimOut}%
+%   \pyconc{exec(compile(open('_temp.py', 'rb').read(), '_temp.py', 'exec'))}%
+%   \inputpygments{python}{_temp.py}}
 
 
 \begin{document}
+
+% \newcolumntype{C}{>{\centering\arraybackslash}m{20mm}}
+
 \selectlanguage{russian}
 
-Hello, TeX table!
+\section{Pylightnix for Nix users}
+
+\subsection{Expressions}
 
 \par
 
@@ -29,55 +38,121 @@ Hello, TeX table!
 
 \hline
 
-Python & Nix
+\multicolumn{1}{|c|}{\textbf{Nix}} &
+\multicolumn{1}{|c|}{\textbf{Pylightnix}}
 
 \\
+\hline
 
-\begin{pyconcodeblock}
-from typing import Callable, Iterator
-import numpy as np
-
-def unfold(next:Callable[[float],float]
-           )->Iterator[float]:
-  x=1.0
-  while x<20:
-    x2=next(x)
-    yield x2
-    x=x2
-
-def _step(x):
-  return x+x
-\end{pyconcodeblock}
-
-\begin{pyconsole}
-[x for x in unfold(_step)]
-\end{pyconsole}
-
-&
-
-\begin{minted}{nix}
-{ pkgs ?  import ./3rdparty/nixpkgs {}
+\begin{minted}[linenos, escapeinside=!!, breaklines, breakafter=0123456789-]{nix}
+{ pkgs? import <nixpkgs> {}
 , stdenv ? pkgs.stdenv
-} :
+}:
+
 let
-  self = pkgs.python37Packages;
+  version = "2.10";
+  url = "mirror://gnu/hello/hello-\${version}.tar.gz";
+  sha256 = "0ssi1wpaf7plaswqqjwigppsg5fyh99vdlb9kzl7c9lng89ndq1i";
 in
-  self
+with pkgs;
+stdenv.mkDerivation rec {
+  name = "hello";
+  src = fetchurl { inherit url sha256; };
+
+  buildInputs = [ gnutar ];
+
+  buildCommand = ''
+    tar -xzf $src
+    cd hello-2.10
+    ./configure --prefix=$out
+    make
+    make install
+  '';
+}
 \end{minted}
 
+&
+
+\small
+\setpythontexfv{breaklines, breakafter=0123456789-, commandchars=\\\{\}}
+\begin{pyblock}[stdout][numbers=left]
+from tempfile import TemporaryDirectory
+from shutil import copytree
+from os import getcwd, chdir, system
+from os.path import join
+from pylightnix import (
+  Manager, DRef, RRef, Config, RefPath,
+  mkconfig, Path, Build, build_outpath, mkdrv,
+  build_wrapper, match_latest, dirrw, mklens,
+  instantiate, realize, fetchurl, promise)
+
+version = '2.10'
+url = f'http://ftp.gnu.org/gnu/hello/hello-{version}.tar.gz'
+sha256 = '31e066137a962676e89f69d1b65382de95a7ef7d914b8cb956f41ea72e0f516b'
+
+def stage_hello(m:Manager)->DRef:
+
+  def _config()->Config:
+    name:str = 'hello-bin'
+    src:RefPath = fetchurl(m, name='hello-src',  # FU \label{fetchurl}
+                              url=url,
+                              sha256=sha256)
+    out_bin = [promise, 'usr', 'bin', 'hello']
+    # TODO: Filter variables of Manager type internally
+    return {k:v for k,v in locals().items() if k!='m'}
+
+  def _make(b:Build)->None:
+    o:Path = build_outpath(b)
+    with TemporaryDirectory() as tmp:
+      copytree(join(mklens(b).src.syspath, f'hello-{version}'), join(tmp,'src'))
+      dirrw(Path(join(tmp,'src')))
+      cwd = getcwd()
+      try:
+        chdir(join(tmp,'src'))
+        system('./configure --prefix=/usr')
+        system('make')
+        system(f'make install DESTDIR={o}')
+      finally:
+        chdir(cwd)
+
+  return mkdrv(m, mkconfig(_config()),
+                  match_latest(),
+                  build_wrapper(_make))
+\end{pyblock}
+
+\normalsize
 
 \\
 
-C
+% Nix comments
+
+% Here goes reference to a line \ref{myline}.
 
 &
 
-D
+% Pylightnix comments
+
+% Ref to \ref{fetchurl}.
 
 \\
 
 \hline
 \end{tabular}
+
+\subsection{Evaluation}
+
+The following snippet illustrates how to build the Pylightnix stage defined
+above.
+
+% print(rref)
+% print(mklens(rref).out_bin.syspath)
+\begin{pyblock}[stdout]
+from subprocess import check_output
+rref:RRef = realize(instantiate(stage_hello))
+print(check_output(mklens(rref).out_bin.syspath, shell=True))
+\end{pyblock}
+Result:
+\stdoutpythontex
 
 \end{document}
 
