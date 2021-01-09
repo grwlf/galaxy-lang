@@ -30,6 +30,10 @@ References
 
 * [TF-Coder at OpenReview](https://openreview.net/forum?id=nJ5Ij53umw2)
 
+**Nix**
+
+* [Python development in NixOS](https://nixos.wiki/wiki/Python)
+
 **Python**
 
 * [Protocol buffers docs, proto2](https://developers.google.com/protocol-buffers/)
@@ -58,7 +62,8 @@ References
 * Literate programming:
   - [Lepton](https://www.math.univ-paris13.fr/~lithiao/ResearchLepton/Lepton.html)
     + [Lepton Sources](https://github.com/slithiaote/lepton)
-  - [Pythontex](https://github.com/gpoore/pythontex)
+  - [Pythontex](https://ctan.math.illinois.edu/macros/latex/contrib/pythontex/pythontex.pdf)
+    + [Pythontex Sources](https://github.com/gpoore/pythontex)
 * Problems
   - [Footnotes in tables](https://tex.stackexchange.com/questions/35200/footnotes-in-tabulars)
 
@@ -79,4 +84,5 @@ Related issues
   1. `ALL_PROXY=socks5h://localhost:8001 nix-prefetch-url <URL>`
    - https://blog.emacsos.com/use-socks5-proxy-in-curl.html
   2. `nix-shell`
+* [Sharing sessions between pyblock and pyconsole](https://github.com/gpoore/pythontex/issues/55)
 

@@ -98,6 +98,28 @@ let
     '';
   };
 
+  my-python-packages = pp: with pp; [
+      pandas
+      ipython
+      parsec
+      pytest-mypy
+      ipdb
+      hypothesis
+
+      immutables
+      frozendict
+      frozenordereddict
+
+      protobuf
+      # mypy-protobuf Doesn't work
+      altair
+      altair-data-server
+      altair-viewer
+      altair-saver
+      scipy
+    ];
+  python-with-my-packages = pkgs.python37.withPackages my-python-packages;
+
   be = pkgs.mkShell {
     name = "pythonshell";
     buildInputs =
@@ -108,8 +130,8 @@ let
     ( with pkgs;
       with self;
     [
-      lepton
-      ocaml  # to test lepton
+      # lepton
+      # ocaml  # to test lepton
       strace
       gdb
 
@@ -121,25 +143,25 @@ let
       # autopep8
       # pyflakes
 
-      numpy
-      pandas
-      parsec
-      pytest-mypy
-      ipdb
-      hypothesis
+      # numpy
+      # pandas
+      # parsec
+      # pytest-mypy
+      # ipdb
+      # hypothesis
 
-      immutables
-      frozendict
-      frozenordereddict
+      # immutables
+      # frozendict
+      # frozenordereddict
 
       (if with_cuda then pytorchWithCuda else pytorch)
 
-      protobuf
-      # mypy-protobuf Doesn't work
-      altair
-      altair-data-server
-      altair-viewer
-      altair-saver
+      # protobuf
+      # # mypy-protobuf Doesn't work
+      # altair
+      # altair-data-server
+      # altair-viewer
+      # altair-saver
 
       nodePackages.vega-lite
       nodePackages.vega-cli
@@ -147,7 +169,7 @@ let
       feh
 
       (let
-         mytexlive = texlive.override { python=pkgs.python3; };
+         mytexlive = texlive.override { python=python-with-my-packages; };
        in
          mytexlive.combine {
            scheme-medium = mytexlive.scheme-medium;
@@ -156,7 +178,9 @@ let
          }
       )
 
-      scipy
+      python-with-my-packages
+
+      # scipy
     ]);
 
     shellHook = with pkgs; ''

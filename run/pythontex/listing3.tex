@@ -6,75 +6,52 @@
 \usepackage[russian,english]{babel}
 \usepackage{minted}
 \renewcommand{\MintedPygmentize}{/nix/store/9r8n35slzprv3q4hfdnc0fz3r70z2y64-python3.7-Pygments-2.7.2/bin/pygmentize}
-\usepackage{pythontex}
+\usepackage[rerun=always]{pythontex}
 \newcommand{\pymultiply}[2]{\py{#1*#2}}
 \usepackage[a4paper, total={6in, 8in}]{geometry}
+
+\newenvironment{pyconcodeblock}%
+ {\VerbatimEnvironment
+  \begin{VerbatimOut}{_temp.py}}%
+ {\end{VerbatimOut}%
+  \pyconc{exec(compile(open('_temp.py', 'rb').read(), '_temp.py', 'exec'))}%
+  \inputpygments{python}{_temp.py}}
+
 
 \begin{document}
 \selectlanguage{russian}
 
-\begin{pycode}
-print("Python says ``Hello!''")
-\end{pycode}
-
-The document is partly in Russian, например, тут:
-
-$8 \times 256 = \pymultiply{8}{256}$
-
-\par
-Some Python code:
-
-\par
-
-\begin{minted}{python}
-import numpy as np
-
-def run(genl1,genl2):
-    m = len(genl1)
-    n = len(genl2)
-    M = None # to become the incidence matrix
-\end{minted}
-
-\par
-
-Some NIX code
-
-\par
-
-\begin{minted}{nix}
-{ pkgs ?  import ./3rdparty/nixpkgs {}
-, stdenv ? pkgs.stdenv
-} :
-let
-  self = pkgs.python37Packages;
-in
-  self
-\end{minted}
-
-\par
-
-Now, a table
+Hello, TeX table!
 
 \par
 
 \begin{tabular}{|p{0.5\textwidth}|p{0.5\textwidth}|}
-% \begin{tabular}{|c|c|}
+
 \hline
 
-\begin{minted}{python}
+Python & Nix
+
+\\
+
+\begin{pyconcodeblock}
+from typing import Callable, Iterator
 import numpy as np
 
-def incmatrix(genl1,genl2):
-    m = len(genl1)
-    n = len(genl2)
-    M = None
-    VT = np.zeros((n*m,1), int)
+def unfold(next:Callable[[float],float]
+           )->Iterator[float]:
+  x=1.0
+  while x<20:
+    x2=next(x)
+    yield x2
+    x=x2
 
-    #compute the bitwise xor matrix
-    M1 = bitxormatrix(genl1)
-    M2 = np.triu(bitxormatrix(genl2),1)
-    return M
-\end{minted}
+def _step(x):
+  return x+x
+\end{pyconcodeblock}
+
+\begin{pyconsole}
+[x for x in unfold(_step)]
+\end{pyconsole}
 
 &
 
