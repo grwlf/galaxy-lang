@@ -94,7 +94,7 @@ def stage_hello(m:Manager)->DRef:
 
   def _config()->Config:
     name:str = 'hello-bin'
-    src:RefPath = fetchurl(m, name='hello-src',  # FU \label{fetchurl}
+    src:RefPath = fetchurl(m, name='hello-src',
                               url=url,
                               sha256=sha256)
     out_bin = [promise, 'usr', 'bin', 'hello']
@@ -132,8 +132,6 @@ def stage_hello(m:Manager)->DRef:
 
 % Pylightnix comments
 
-% Ref to \ref{fetchurl}.
-
 \\
 
 \hline
@@ -147,12 +145,14 @@ above.
 % print(rref)
 % print(mklens(rref).out_bin.syspath)
 \begin{pyblock}[stdout]
-from subprocess import check_output
+from subprocess import check_output   # FU \label{fetchurl}
 rref:RRef = realize(instantiate(stage_hello))
 print(check_output(mklens(rref).out_bin.syspath, shell=True))
 \end{pyblock}
 Result:
 \stdoutpythontex
+
+Ref to \ref{fetchurl}.
 
 \end{document}
 
