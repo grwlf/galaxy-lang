@@ -6,7 +6,7 @@ from galang.edsl import num, ref, let_, lam, ap, lam, intrin
 
 from galang.serbin_pb2 import Node, Value, Tuple as PBTuple, List as PBList
 
-from typing import List, Any, Callable
+from typing import List, Any, Callable, Tuple
 from enum import IntEnum, unique
 
 BIN=Any
@@ -230,4 +230,28 @@ def fd2examples(f, chunk:int=256)->Callable[[],Example]:
     buf=buf[msg_len:]
     return bin2ex(node)
   return _next
+
+def fd2examples2(f, chunk:int=256)->Tuple[Callable[[],Example],
+                                         Callable[[],None]]:
+  buf=bytearray()
+  def _next()->Example:
+    nonlocal buf
+    buf+=f.read(chunk)
+    msg_len,new_pos = _DecodeVarint32(buf,0)
+    buf=buf[new_pos:]
+    while len(buf)<msg_len:
+      buf+=f.read(chunk)
+    node=Node()
+    node.ParseFromString(buf[:msg_len])
+    buf=buf[msg_len:]
+    return bin2ex(node)
+  def _skip()->None:
+    nonlocal buf
+    buf+=f.read(chunk)
+    msg_len,new_pos = _DecodeVarint32(buf,0)
+    buf=buf[new_pos:]
+    while len(buf)<msg_len:
+      buf+=f.read(chunk)
+    buf=buf[msg_len:]
+  return _next,_skip
 

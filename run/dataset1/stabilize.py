@@ -14,7 +14,7 @@ from galang.utils import refs, print_expr, gather
 from pylightnix import (Manager, Build, DRef, realize, instantiate,
                         store_initialize, Manager, mklens, mkconfig, mkdref,
                         build_wrapper, build_setoutpaths, promise, match_only,
-                        mkdrv, linkrref, match_latest)
+                        mkdrv, linkrref, match_latest, redefine)
 from galang.stages.all import stage_inputs, stage_dataset1, stage_dataset2
 from galang.serbin import fd2examples, examples2fd
 from pandas import DataFrame
@@ -298,14 +298,14 @@ def run_dataset2(what:int=2, maxitems:int=5000, index:int=1, interactive:bool=Tr
   # system("feh _plot.png")
   # print('Done')
 
-def load(what:int)->DataFrame:
+def load2(what:int)->DataFrame:
   rref=run_dataset2(what, interactive=False)
   df=pd.read_csv(mklens(rref).df.syspath)
   return df
 
 
 def tryks():
-  df=load(2)
+  df=load2(2)
   print(kstest(df[df['isin']==0]['data'].to_numpy(),'uniform'))
 
 
@@ -355,14 +355,26 @@ def stage_datasetS(m:Manager, index:int=0, Nvalid:int=5000, npoints:int=100)->DR
 
 Nall=1000000
 N1=15000
+INDICES=list(range(Nall//N1))
+
+def load3(index, allow_realize:bool=True):
+  """ Loads the stabilized dataset """
+  if allow_realize:
+    stage=stage_datasetS
+  else:
+    def _err(*args, **kwargs):
+      raise LookupError("Attempting to realize dataset section with index {index}")
+    stage=redefine(stage_datasetS, new_realizer=_err)
+  return realize(instantiate(stage, index=index, Nvalid=N1, npoints=2000))
+
 def myprocess(index):
-  rref=realize(instantiate(stage_datasetS, index=index, Nvalid=N1, npoints=2000))
+  rref=load3(index)
   linkrref(rref, join('.','_results','dataset3-1K',f"{index:04d}"))
+  return rref
 
 def run(nproc:int):
-  indices=list(range(Nall//N1))
   with Pool(nproc) as p:
-    p.map(myprocess, indices)
+    p.map(myprocess, INDICES)
 
 if __name__=='__main__':
   run(10)
