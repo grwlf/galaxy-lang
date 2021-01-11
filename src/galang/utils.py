@@ -1,8 +1,10 @@
-from galang.types import Expr, Ref, TMap, Intrin, Lam, Val, Const, Ap, Let, Mem
+from galang.types import (Expr, Ref, TMap, Intrin, Lam, Val, Const, Ap, Let,
+                          Mem, MethodName, mkmap, mergemap)
 from galang.edsl import let_
 from typing import List, Tuple, Dict, Union, Callable, Set, Optional, Iterator
 
 from functools import lru_cache
+from copy import deepcopy
 
 @lru_cache(maxsize=128)
 def refs_(e:Expr, declarations:bool=True, references:bool=True)->Set[Ref]:
@@ -74,6 +76,23 @@ def print_expr(e:Expr)->str:
     return f"let {e.ref.name} = {print_expr(e.expr)} in {print_expr(e.body)}"
   elif isinstance(e, Intrin):
     return f"{e.name.val}({','.join([k+'='+print_expr(v) for k,v in sorted(e.args.items())])})"
+  else:
+    raise ValueError(f"Invalid expression '{e}'")
+
+def freqs(e:Expr)->TMap[MethodName,int]:
+  """ Prints the expression """
+  def mm(a,b):
+    return mergemap(a,b,lambda x,y:x+y)
+  if isinstance(e,Val):
+    return mkmap({})
+  elif isinstance(e, Ap):
+    return mm(freqs(e.func), freqs(e.arg))
+  elif isinstance(e, Lam):
+    return freqs(e.body)
+  elif isinstance(e, Let):
+    return mm(freqs(e.expr), freqs(e.body))
+  elif isinstance(e, Intrin):
+    return mkmap({e.name:1})
   else:
     raise ValueError(f"Invalid expression '{e}'")
 

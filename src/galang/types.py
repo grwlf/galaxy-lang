@@ -30,9 +30,26 @@ class TMap(Generic[M,I]):
     return self.dict.keys()
   def __eq__(self,other):
     return self.dict==other.dict
+  def __len__(self):
+    return len(self.dict)
 
 def mkmap(d:Optional[Dict[M,I]]=None)->TMap[M,I]:
   return TMap(d if d is not None else {})
+
+def mergemap(a:TMap[M,I], b:TMap[M,I], f:Callable[[I,I],I])->TMap[M,I]:
+  d={}
+  ak=set(a.keys())
+  bk=set(b.keys())
+  for k in a.keys():
+    if k in bk:
+      d[k]=f(a[k],b[k])
+      bk-=set([k])
+    else:
+      d[k]=a[k]
+  for k in b.keys():
+    if k not in ak:
+      d[k]=b[k]
+  return TMap(d)
 
 #  _____
 # | ____|_  ___ __  _ __

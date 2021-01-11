@@ -6,7 +6,7 @@ from galang.edsl import let_, let, num, intrin, call, ref, num, lam, ap
 from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, permute, WLib, mkwlib
 from galang.types import (MethodName, TMap, Dict, mkmap, Ref, Mem, Expr, Tuple,
-                          NamedTuple, Example)
+                          NamedTuple, Example, Lib)
 from galang.serbin import fd2examples2, fd2examples
 # from galang.ser import Example
 
@@ -82,11 +82,13 @@ def i2t(i:int)->LongTensor:
   assert res.shape==(64,2)
   return res
 
-def featurize(e:Example, maxinp:int=2)->Tensor:
+def features(e:Example, maxinp:int=2)->Tensor:
   inum=len(list(e.inp.values()))
   assert inum<=maxinp
   nums=[0]*(maxinp-inum) + [int(i.val) for i in e.inp.values()] + [int(e.out.val)]
   print([i2t(n) for n in nums])
   return cat([i2t(n) for n in nums], dim=0)
 
+def labels(l:Lib, e:Example)->Tensor:
+  pass
 

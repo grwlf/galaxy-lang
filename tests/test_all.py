@@ -3,9 +3,9 @@ from galang.edsl import let_, let, num, intrin, call, ref, num, lam, ap
 from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, permute, WLib, mkwlib
 from galang.types import (MethodName, TMap, Dict, mkmap, Ref, Mem, IVal, IExpr,
-                          IMem, IVal, IAp, IError, ILam, Example)
+                          IMem, IVal, IAp, IError, ILam, Example, mergemap)
 from galang.utils import (refs_, extrefs, refs, decls, print_expr, gather,
-                          gengather)
+                          gengather, freqs)
 from galang.serjson import (jstr2expr, expr2jstr, iexpr2jstr, jstr2iexpr, jstr2imem,
                         imem2jstr)
 from galang.serbin import (expr2bin, bin2expr, iexpr2bin, bin2iexpr, bin2imem,
@@ -18,6 +18,21 @@ from hypothesis.strategies import (text, decimals, integers, characters,
                                    binary, just)
 from pytest import raises
 from ipdb import set_trace
+
+
+def test_mergemap()->None:
+  assert mergemap(mkmap({1:1,2:2}),
+                  mkmap({1:10,3:30}),
+                  lambda a,b:a+b)==mkmap({1:11,2:2,3:30})
+  assert mergemap(mkmap({1:1,3:3}),mkmap({}), lambda a,b:a+b)==mkmap({1:1,3:3})
+  assert mergemap(mkmap({}),mkmap({1:1,3:3}), lambda a,b:a+b)==mkmap({1:1,3:3})
+
+def test_freqs()->None:
+  e = let(num(33), lambda a:
+      let(num(42), lambda b:
+          intrin(MethodName("add"), [('a',a),('b',b)])))
+  assert freqs(e)[MethodName("add")]==1
+  assert len(freqs(e))==1
 
 def test_eq()->None:
   assert let_('a', num(33), lambda x: x) == let_('a', num(33), lambda x: x)
