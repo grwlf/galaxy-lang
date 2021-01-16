@@ -125,7 +125,7 @@ let
     buildInputs =
     [
       pyls-mypy
-      # pyls
+      pyls
     ] ++
     ( with pkgs;
       with self;

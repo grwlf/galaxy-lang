@@ -80,7 +80,7 @@ def print_expr(e:Expr)->str:
     raise ValueError(f"Invalid expression '{e}'")
 
 def freqs(e:Expr)->TMap[MethodName,int]:
-  """ Prints the expression """
+  """ returns the intrinciq usage statistics """
   def mm(a,b):
     return mergemap(a,b,lambda x,y:x+y)
   if isinstance(e,Val):
