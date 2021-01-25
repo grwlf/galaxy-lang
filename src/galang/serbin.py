@@ -124,8 +124,8 @@ def bin2expr(j:BIN)->Expr:
     return ap(bin2expr(j.value.tuple.v1.node),
               bin2expr(j.value.tuple.v2.node))
   elif typ==Tag.intrin:
-    return intrin(MethodName(j.value.tuple.v1.string),
-                  [(         v.tuple.v1.string,
+    return intrin(MethodName(str(j.value.tuple.v1.string)),
+                  [(         str(v.tuple.v1.string),
                     bin2expr(v.tuple.v2.node)) for v in j.value.tuple.v2.list.list])
   else:
     raise ValueError(f"Invalid expression {_flat(j)}")
@@ -161,13 +161,13 @@ def bin2iexpr(j:BIN)->IExpr:
     else:
       raise ValueError(f"Invalid value expression {j}")
   elif j.tag==Tag.ilam:
-    return ILam(         j.value.tuple.v1.string,
+    return ILam(     str(j.value.tuple.v1.string),
                 bin2expr(j.value.tuple.v2.node))
   elif j.tag==Tag.iap:
     return IAp(bin2iexpr(j.value.tuple.v1.node),
                bin2iexpr(j.value.tuple.v2.node))
   elif j.tag==Tag.ierror:
-    return IError(j.value.string)
+    return IError(str(j.value.string))
   else:
     raise ValueError(f"Invalid expression {_flat(j)}")
 
@@ -181,7 +181,7 @@ def imem2bin(m:IMem)->BIN:
 
 def bin2imem(d:BIN)->IMem:
   assert d.tag == Tag.imem, f"Unexpected tag {d.tag}"
-  return IMem({Ref(i.tuple.v1.string):bin2iexpr(i.tuple.v2.node)
+  return TMap({Ref(str(i.tuple.v1.string)):bin2iexpr(i.tuple.v2.node)
                for i in d.value.list.list})
 
 
@@ -195,7 +195,6 @@ def bin2ex(e:BIN)->Example:
   return Example(bin2imem(e.value.tuple.v1.node),
                  bin2expr(e.value.tuple.v2.tuple.v1.node),
                  bin2iexpr(e.value.tuple.v2.tuple.v2.node))
-
 
 from google.protobuf.internal.encoder import _VarintBytes    #type:ignore
 from google.protobuf.internal.decoder import _DecodeVarint32 #type:ignore

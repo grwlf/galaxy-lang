@@ -32,6 +32,8 @@ class TMap(Generic[M,I]):
     return self.dict==other.dict
   def __len__(self):
     return len(self.dict)
+  def __repr__(self):
+    return f"TMap({self.dict.__repr__()})"
 
 def mkmap(d:Optional[Dict[M,I]]=None)->TMap[M,I]:
   return TMap(d if d is not None else {})

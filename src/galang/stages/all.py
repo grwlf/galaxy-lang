@@ -153,7 +153,7 @@ def stage_dataset2(m:Manager, ref_inputs:DRef,
           for j in range(len(IMEMs)):
             if len(ds)>0:
               # print(gi, j, list(inps.keys()), print_expr(expr))
-              inps = IMem({k:imems[j][k] for k in er})
+              inps:IMem = TMap({k:imems[j][k] for k in er})
               acci |= set(inps.values())
               written_bytes+=_add(Example(inps,expr,imems[j][r]))
               written_items+=1

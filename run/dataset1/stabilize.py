@@ -358,7 +358,8 @@ N1=15000
 INDICES=list(range(Nall//N1))
 
 def load3(index, allow_realize:bool=True):
-  """ Loads the stabilized dataset """
+  """ Loads the stabilized dataset. Raises LookupError if realization is
+  forbidden and the data are absent. """
   if allow_realize:
     stage=stage_datasetS
   else:

@@ -3,13 +3,14 @@ from galang.edsl import let_, let, num, intrin, call, ref, num, lam, ap
 from galang.domain.arith import lib as lib_arith
 from galang.gen import genexpr, permute, WLib, mkwlib
 from galang.types import (MethodName, TMap, Dict, mkmap, Ref, Mem, IVal, IExpr,
-                          IMem, IVal, IAp, IError, ILam, Example, mergemap)
+                          Expr, IMem, IVal, IAp, IError, ILam, Example,
+                          mergemap, List)
 from galang.utils import (refs_, extrefs, refs, decls, print_expr, gather,
-                          gengather, freqs)
+                          gengather, freqs, check_expr)
 from galang.serjson import (jstr2expr, expr2jstr, iexpr2jstr, jstr2iexpr, jstr2imem,
                         imem2jstr)
 from galang.serbin import (expr2bin, bin2expr, iexpr2bin, bin2iexpr, bin2imem,
-                           imem2bin, examples2fd, fd2examples)
+                           imem2bin, examples2fd, fd2examples, bin2ex, ex2bin)
 
 from hypothesis import given, assume, example, note, settings, event, HealthCheck
 from hypothesis.strategies import (text, decimals, integers, characters,
@@ -18,14 +19,18 @@ from hypothesis.strategies import (text, decimals, integers, characters,
                                    binary, just)
 from pytest import raises
 from ipdb import set_trace
+from multiprocessing import Pool
+
 
 
 def test_mergemap()->None:
-  assert mergemap(mkmap({1:1,2:2}),
+  def _mm(a:TMap[int,int], b:TMap[int,int], f)->TMap[int,int]:
+    return mergemap(a,b,f)
+  assert _mm(mkmap({1:1,2:2}),
                   mkmap({1:10,3:30}),
                   lambda a,b:a+b)==mkmap({1:11,2:2,3:30})
-  assert mergemap(mkmap({1:1,3:3}),mkmap({}), lambda a,b:a+b)==mkmap({1:1,3:3})
-  assert mergemap(mkmap({}),mkmap({1:1,3:3}), lambda a,b:a+b)==mkmap({1:1,3:3})
+  assert _mm(mkmap({1:1,3:3}),mkmap({}), lambda a,b:int(a+b))==mkmap({1:1,3:3})
+  assert _mm(mkmap({}),mkmap({1:1,3:3}), lambda a,b:int(a+b))==mkmap({1:1,3:3})
 
 def test_freqs()->None:
   e = let(num(33), lambda a:
@@ -76,6 +81,16 @@ def test_tmap()->None:
   cache[x] = True # Check hashability
   assert cache[x] is True
 
+def _test_tmap_pickle(i:int)->TMap[int,str]:
+  return TMap({i:str(i)})
+
+def test_tmap_pickle()->None:
+  accs=[]
+  with Pool(2) as p:
+    accs=p.map(_test_tmap_pickle, list(range(100)), chunksize=2)
+  assert len(accs)==100
+  assert all([accs[i][i]==str(i) for i in range(100)])
+
 def test_refs()->None:
   e = let_('a', num(33), lambda a:
       let_('b', num(42), lambda b:
@@ -83,6 +98,12 @@ def test_refs()->None:
   assert refs_(e)==set([Ref('a'),Ref('b'),Ref('c')])
   assert refs(e)==set([Ref('a'),Ref('c')])
   assert decls(e)==set([Ref('a'),Ref('b')])
+
+EXPRS = [
+  intrin(MethodName("add"), [('a',num(0)),('b',ref('1'))]),
+  let_('a',num(33),lambda a: num(42)),
+  ap(lam('a',lambda a: num(42)), num(33))
+]
 
 def test_print()->None:
   assert print_expr(intrin(MethodName("add"), [('a',num(0)),('b',ref('1'))])) == "add(a=0,b=1)"
@@ -202,4 +223,21 @@ def test_example():
     assert n==e
 
 
+def _test_example_pickle(i:int)->Example:
+  e1=Example(
+    inp=mkmap({}),
+    expr=EXPRS[i % len(EXPRS)],
+    out=IVal(i))
+  e2=bin2ex(ex2bin(e1))
+  check_expr(e2.expr)
+  return e2
+
+def test_example_pickle()->None:
+  N=100
+  acc=[]
+  with Pool(2) as p:
+    acc=p.map(_test_example_pickle, list(range(N)), chunksize=2)
+  assert len(acc)==N
+  for ex in acc:
+    check_expr(ex.expr)
 

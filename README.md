@@ -41,6 +41,11 @@ References
 * https://www.datadoghq.com/blog/engineering/protobuf-parsing-in-python/
 * [Struct](https://docs.python.org/3/library/struct.html)
 
+**Pytorch**
+
+* [torch.utils.data](https://pytorch.org/docs/1.7.1/data.html?highlight=torch%20utils%20data#module-torch.utils.data)
+* [PyTroch data loading tutorial](https://pytorch.org/tutorials/beginner/data_loading_tutorial.html)
+
 **Pandas**
 
 * [GroupBy API Reference](https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.groupby.html)

@@ -128,6 +128,32 @@ def gengather(top:Ref, mem:Mem)->Iterator[Expr]:
       yield acc
 
 
+def check_expr(e:Expr)->None:
+  """ Prints the expression """
+  if isinstance(e,Val):
+    if isinstance(e.val, Ref):
+      assert isinstance(e.val.name, str)
+    elif isinstance(e.val, Const):
+      assert isinstance(e.val.const, int)
+    else:
+      raise ValueError(f"Invalid value-expr '{e}'")
+  elif isinstance(e, Ap):
+    check_expr(e.func)
+    check_expr(e.arg)
+  elif isinstance(e, Lam):
+    assert isinstance(e.name, str)
+    check_expr(e.body)
+  elif isinstance(e, Let):
+    assert isinstance(e.ref.name, str)
+    check_expr(e.expr)
+    check_expr(e.body)
+  elif isinstance(e, Intrin):
+    assert isinstance(e.name.val, str)
+    for n,a in e.args.items():
+      assert isinstance(n, str)
+      check_expr(a)
+  else:
+    raise ValueError(f"Invalid expression '{e}'")
 
 """
 def assemble(top:Ref, mem:Mem)->Expr:

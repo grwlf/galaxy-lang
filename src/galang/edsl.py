@@ -13,19 +13,19 @@ def mkname(hint:str)->str:
   return acc
 
 def num(x:int)->Expr:
-  return Val(Const(x))
+  return Val(Const(int(x)))
 
 def ref(x:str)->Expr:
-  return Val(Ref(x))
+  return Val(Ref(str(x)))
 
 def lam(name:str, body:Callable[[Expr], Expr])->Expr:
-  return Lam(name, body(ref(name)))
+  return Lam(str(name), body(ref(name)))
 
 def ap(func:Expr, arg:Expr)->Expr:
   return Ap(func, arg)
 
 def let_(name:str, expr:Expr, body:Callable[[Expr], Expr])->Expr:
-  return Let(Ref(name), expr, body(ref(name)))
+  return Let(Ref(str(name)), expr, body(ref(name)))
 
 def let(expr:Expr, body:Callable[[Expr], Expr])->Expr:
   name = mkname('let')
@@ -40,6 +40,6 @@ def call(func:Expr, args:Iterable[Expr])->Expr:
 def intrin(name:MethodName, args:List[Tuple[str,Expr]])->Expr:
   acc = OrderedDict()
   for (k,v) in args:
-    acc[k] = v
+    acc[str(k)] = v
   return Intrin(name, TMap(acc))
 

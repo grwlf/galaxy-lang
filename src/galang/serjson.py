@@ -111,7 +111,7 @@ def jstr2iexpr(j:str)->IExpr:
 def imem2json(m:IMem)->dict:
   return {k.name:iexpr2json(v) for k,v in m.dict.items()}
 def json2imem(d:dict)->IMem:
-  return IMem({Ref(k):json2iexpr(v) for k,v in d.items()})
+  return TMap({Ref(k):json2iexpr(v) for k,v in d.items()})
 def imem2jstr(m:IMem)->str:
   return json_dumps(imem2json(m))
 def jstr2imem(j:str)->IMem:
