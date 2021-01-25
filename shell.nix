@@ -165,6 +165,7 @@ let
 
       nodePackages.vega-lite
       nodePackages.vega-cli
+      nodePackages.npm
 
       feh
 
