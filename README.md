@@ -71,6 +71,9 @@ References
     + [Pythontex Sources](https://github.com/gpoore/pythontex)
 * Problems
   - [Footnotes in tables](https://tex.stackexchange.com/questions/35200/footnotes-in-tabulars)
+* [Math fonts](https://www.overleaf.com/learn/latex/Mathematical_fonts)
+* HTML
+  - https://tug.org/tex4ht/
 
 **Math**
 
