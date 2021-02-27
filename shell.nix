@@ -176,7 +176,7 @@ let
            scheme-medium = mytexlive.scheme-medium;
            inherit (mytexlive) fvextra upquote xstring pgfopts currfile
            collection-langcyrillic makecell ftnxtra minted catchfile framed
-           pdflscape;
+           pdflscape environ trimspaces mdframed zref needspace;
          }
       )
 
